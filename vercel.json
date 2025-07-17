@@ -2,14 +2,15 @@
   "version": 2,
   "builds": [
     {
-      "src": "bot.py",
+      "src": "main.py",
       "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.9"
-      }
+      "config": { "maxLambdaSize": "15mb" }
     }
   ],
   "routes": [
-    { "src": "/.*", "dest": "/bot.py" }
+    {
+      "src": "/(.*)",
+      "dest": "main.py"
+    }
   ]
 }
