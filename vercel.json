@@ -5,13 +5,11 @@
       "src": "bot.py",
       "use": "@vercel/python",
       "config": {
-        "runtime": "python3.9" // Или другая версия Python, которую вы используете
+        "runtime": "python3.9"
       }
     }
   ],
   "routes": [
-    // Для всех запросов к корню, используем bot.py
-    // Vercel автоматически запускает Flask приложение, если оно найдено в bot.py
     { "src": "/.*", "dest": "/bot.py" }
   ]
 }
