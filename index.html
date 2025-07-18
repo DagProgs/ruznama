@@ -1,45 +1,49 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <link rel="stylesheet" href="css/styles.css">
-    <title>Рузнама - Времена намазов</title>
-    <meta name="description" content="Точное время обязательных намазов:
-    сегодня - месяц - год">
-    <meta name="keywords" content="Рузнама, Времена намазов">
-    <meta name="robots" content="index,follow,noodp">
-    <meta name="googlebot" content="index,follow">
-    <meta name="google" content="nositelinkssearchbox">
-    <meta name="google" content="notranslate">
-    <meta name="google-site-verification" content="verification_token">
-    <meta name="generator" content="WEB APP">
-    <meta content="Рузнама">
-    <meta content="website">
-	<script src="https://telegram.org/js/telegram-web-app.js "></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="jquery.min.js"></script>
+  <title>Рузнама</title>
 </head>
 
 <body>
-    <div class="app">
-        <ul>
-            <li><button class="file-btn" data-file="1.json">Курахский район</button></li>
-            <li><button class="file-btn" data-file="2.json">С.Стальский район</button></li>
-        </ul>
+  <div class="col times_of_prayer">
+    <div class="time_table">
+      <div class="top table">
+        <div class="col top-element fajr"><strong>Фаджр</strong> <span>--:--</span></div>
+        <div class="col top-element sunrise"><strong>Восход</strong> <span>--:--</span></div>
+        <div class="col top-element dhuhr"><strong>Зухр</strong> <span>--:--</span></div>
+        <div class="col top-element asr"><strong>Аср</strong> <span>--:--</span></div>
+        <div class="col top-element maghrib"><strong>Магриб</strong> <span>--:--</span></div>
+        <div class="col top-element night"><strong>Иша</strong> <span>--:--</span></div>
+      </div>
+      <div class="time_line">
+        <div class="time_line_cont">
+          <div data-position="0" data-name="fajr" class="pnt point1"></div>
+          <div data-position="20" data-name="sunrise" class="pnt point2"></div>
+          <div data-position="40" data-name="dhuhr" class="pnt point3"></div>
+          <div data-position="60" data-name="asr" class="pnt point4"></div>
+          <div data-position="80" data-name="maghrib" class="pnt point5"></div>
+          <div data-position="100" data-name="night" class="pnt point6"></div>
+          <div class="line_full width40"></div>
+        </div>
+      </div>
+      <div class="bottom_info"><span class="timeUntilNextPrayer">01:25:00</span> осталось до <span
+          class="strong"></span>
+      </div>
     </div>
+  </div>
+  <div class="col city_info">
+    <div class="city_info_cont">
 
-    <script>
-        document.querySelectorAll('.file-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const file = btn.getAttribute('data-file');
-                // сохраняем выбранный файл в localStorage
-                localStorage.setItem('selectedJsonFile', file);
-                // переходим на pages.html
-                window.location.href = 'pages.html';
-            });
-        });
-    </script>
+      <select name="choose_place" id="choose_place" class="choose_place">
+      </select>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 
 </html>
