@@ -4,22 +4,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
-    <title>Рузнама</title>
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <link rel="stylesheet" href="css/styles.css">
+    <title>Рузнама - Времена намазов</title>
+    <meta name="description" content="Точное время обязательных намазов:
+    сегодня - месяц - год">
+    <meta name="keywords" content="Рузнама, Времена намазов">
+    <meta name="robots" content="index,follow,noodp">
+    <meta name="googlebot" content="index,follow">
+    <meta name="google" content="nositelinkssearchbox">
+    <meta name="google" content="notranslate">
+    <meta name="google-site-verification" content="verification_token">
+    <meta name="generator" content="WEB APP">
+    <meta content="Рузнама">
+    <meta content="website">
 </head>
 
 <body>
-    <header>
-        <h1>Рузнама</h1>
-    </header>
-    <main>
-        <div class="button">
-            <a href="https://dagprogs.github.io/rkurah/">Курахский район</a>
-        </div>
-        <div class="button">
-            <a href="https://dagprogs.github.io/rstalsk/">С.Стальский район</a>
-        </div>
-    </main>
+    <div class="app">
+        <ul>
+            <li><button class="file-btn" data-file="1.json">Курахский район</button></li>
+            <li><button class="file-btn" data-file="2.json">С.Стальский район</button></li>
+        </ul>
+    </div>
+
+    <script>
+        document.querySelectorAll('.file-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const file = btn.getAttribute('data-file');
+                // сохраняем выбранный файл в localStorage
+                localStorage.setItem('selectedJsonFile', file);
+                // переходим на pages.html
+                window.location.href = 'pages.html';
+            });
+        });
+    </script>
 </body>
 
 </html>

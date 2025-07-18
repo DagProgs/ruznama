@@ -1,0 +1,86 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+body {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 12px;
+}
+
+.app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+}
+
+ul {
+    list-style: none;
+}
+
+li {
+    padding: 5px 10px;
+}
+
+.file-btn {
+    width: calc(100vw - 20px);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+/* pages */
+.container {
+    width: 100vw;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 0 15px;
+}
+
+#date-info {
+    font-size: 1.2em;
+    color: #34495e;
+    padding: 10px 0;
+}
+
+.prayer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.prayer-item {
+    display: flex;
+    justify-content: space-between;
+    background-color: #ecf0f1;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.prayer-item:hover {
+    background-color: #d0d7de;
+}
+
+.prayer-name {
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.prayer-time {
+    font-weight: 700;
+    font-size: 1.1em;
+    color: #2980b9;
+}
+
+#file-name {
+    padding-bottom: 10px;
+    font-size: 1em;
+    color: #7f8c8d;
+}
