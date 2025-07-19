@@ -1,71 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="jquery.min.js"></script>
-  <style>
-    .table {
-      display: block;
-      flex-direction: column;
-    }
-
-    .table span {
-      display: flex;
-      flex-wrap: nowrap;
-      justify-content: end;
-    }
-
-    .table, .bottom_info {
-      background-color: #f1f1f1;
-      border-radius: 10px;
-      padding: 10px;
-    }
-
-    .col, .bottom_info {
-      margin: 10px;
-    }
-  </style>
-  <title>Рузнама</title>
+  <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.ico" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description" content="Web site created using create-react-app" />
+  <link rel="apple-touch-icon" href="/logo192.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>Рузнама - Курахский район</title>
+  <script defer="defer" src="/static/js/main.90cc5a31.js"></script>
+  <link href="/static/css/main.e6c13ad2.css" rel="stylesheet">
 </head>
 
-<body>
-  <div class="col times_of_prayer">
-    <div class="time_table">
-      <div class="top table">
-        <div class="col top-element fajr"><strong>Фаджр</strong> <span>--:--</span></div>
-        <div class="col top-element sunrise"><strong>Восход</strong> <span>--:--</span></div>
-        <div class="col top-element dhuhr"><strong>Зухр</strong> <span>--:--</span></div>
-        <div class="col top-element asr"><strong>Аср</strong> <span>--:--</span></div>
-        <div class="col top-element maghrib"><strong>Магриб</strong> <span>--:--</span></div>
-        <div class="col top-element night"><strong>Иша</strong> <span>--:--</span></div>
-      </div>
-      <div class="time_line">
-        <div class="time_line_cont">
-          <div data-position="0" data-name="fajr" class="pnt point1"></div>
-          <div data-position="20" data-name="sunrise" class="pnt point2"></div>
-          <div data-position="40" data-name="dhuhr" class="pnt point3"></div>
-          <div data-position="60" data-name="asr" class="pnt point4"></div>
-          <div data-position="80" data-name="maghrib" class="pnt point5"></div>
-          <div data-position="100" data-name="night" class="pnt point6"></div>
-          <div class="line_full width40"></div>
-        </div>
-      </div>
-      <div class="bottom_info"><span class="timeUntilNextPrayer">01:25:00</span> осталось до <span
-          class="strong"></span>
-      </div>
-    </div>
-  </div>
-  <div class="col city_info">
-    <div class="city_info_cont">
-
-      <select name="choose_place" id="choose_place" class="choose_place">
-      </select>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
+<body><noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
 </body>
 
 </html>
