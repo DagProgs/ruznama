@@ -1,0 +1,14 @@
+main {
+  position: relative;
+}
+
+.main_container {
+  width: calc(100vw - 10px);
+  min-width: calc(320px - 10px);
+  height: calc(100vh - 115px);
+  margin: 5px;
+  padding: 10px;
+  background-color: var(--color-bg-block);
+  border-radius: 15px;
+  overflow: auto;
+}

@@ -1,0 +1,22 @@
+.list_container {
+  display: none;
+}
+
+.list_container #cityList {
+  list-style-type: none;
+  padding: 20px;
+  margin: 5px 0;
+}
+
+.list_container ul {
+  border-radius: 10px;
+  background-color: var(--color-background);
+}
+
+.list_container #cityList li {
+  padding-bottom: 5px;
+  margin: 10px 0;
+  cursor: pointer;
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--line);
+}
