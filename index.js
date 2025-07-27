@@ -1,10 +1,9 @@
 const { Telegraf } = require('telegraf');
 const quotes = require('./quotes.json');
-const timesDb = require('./times_db.json'); // Загружаем times_db.json
+const timesDb = require('./times_db.json');
 const fs = require('fs');
 const path = require('path');
 
-// Проверяем, есть ли токен
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN не установлен в переменных окружения');
@@ -28,37 +27,32 @@ const russianToEnglishMonth = {
   'декабрь': 'December'
 };
 
-// Получить английское название месяца по русскому или текущему
 function getEnglishMonthName(russianNameOrNow = 'now') {
   if (russianNameOrNow === 'now') {
     const now = new Date();
-    return now.toLocaleString('en-GB', { month: 'long' }); // Получаем английское название текущего месяца
+    return now.toLocaleString('en-GB', { month: 'long' });
   } else {
-    // Приводим к нижнему регистру для сравнения
     const lowerRussianName = russianNameOrNow.toLowerCase();
     for (const [ru, en] of Object.entries(russianToEnglishMonth)) {
       if (ru.toLowerCase() === lowerRussianName) {
         return en;
       }
     }
-    return null; // Месяц не найден
+    return null;
   }
 }
 
-// Получить русское название месяца по английскому
 function getRussianMonthName(englishName) {
-    for (const [ru, en] of Object.entries(russianToEnglishMonth)) {
-      if (en === englishName) {
-        return ru;
-      }
+  for (const [ru, en] of Object.entries(russianToEnglishMonth)) {
+    if (en === englishName) {
+      return ru;
     }
-    return englishName; // Если не найдено, возвращаем оригинальное (на случай ошибок)
+  }
+  return englishName;
 }
 
-// Путь к файлу с пользователями
 const usersFilePath = path.join(__dirname, 'users.json');
 
-// Загружаем список пользователей из файла
 function loadUsers() {
   try {
     if (fs.existsSync(usersFilePath)) {
@@ -71,7 +65,6 @@ function loadUsers() {
   return new Set();
 }
 
-// Сохраняем список пользователей в файл
 function saveUsers(users) {
   try {
     fs.writeFileSync(usersFilePath, JSON.stringify([...users]), 'utf8');
@@ -80,55 +73,46 @@ function saveUsers(users) {
   }
 }
 
-// Инициализируем список пользователей
 let users = loadUsers();
 
-// Функция для добавления пользователя
 function addUser(userId) {
   const userCountBefore = users.size;
-  users.add(userId.toString()); // Преобразуем в строку для единообразия
+  users.add(userId.toString());
   if (users.size > userCountBefore) {
     saveUsers(users);
     console.log(`Новый пользователь добавлен. Всего пользователей: ${users.size}`);
   }
 }
 
-// Функция для получения количества пользователей
 function getUserCount() {
   return users.size;
 }
 
-// Функция для получения случайной цитаты
 function getRandomQuote() {
   const randomIndex = Math.floor(Math.random() * quotes.length);
   return quotes[randomIndex];
 }
 
-// --- Функции для работы с временами намазов ---
-
-// Получить время намазов на сегодня
 function getPrayerTimesForToday() {
-    const now = new Date();
-    // Получаем английское название текущего месяца
-    const monthNameEnglish = now.toLocaleString('en-GB', { month: 'long' });
-    const day = String(now.getDate()).padStart(2, '0');
-    const monthNameRussian = now.toLocaleString('ru-RU', { month: 'long' });
-    const monthNameRussianCapitalized = monthNameRussian.charAt(0).toUpperCase() + monthNameRussian.slice(1);
+  const now = new Date();
+  const monthNameEnglish = now.toLocaleString('en-GB', { month: 'long' });
+  const day = String(now.getDate()).padStart(2, '0');
+  const monthNameRussian = now.toLocaleString('ru-RU', { month: 'long' });
+  const monthNameRussianCapitalized = monthNameRussian.charAt(0).toUpperCase() + monthNameRussian.slice(1);
 
-    const monthData = timesDb[monthNameEnglish]; // Используем английское имя
-    if (!monthData) {
-        return `Ошибка: данные для месяца "${monthNameEnglish}" не найдены.`;
-    }
+  const monthData = timesDb[monthNameEnglish];
+  if (!monthData) {
+    return `Ошибка: данные для месяца "${monthNameEnglish}" не найдены.`;
+  }
 
-    const dayData = monthData[day];
-    if (!dayData) {
-        return `Ошибка: данные для ${day} ${monthNameRussianCapitalized} не найдены.`;
-    }
+  const dayData = monthData[day];
+  if (!dayData) {
+    return `Ошибка: данные для ${day} ${monthNameRussianCapitalized} не найдены.`;
+  }
 
-    // Форматируем время в HH:MM
-    const formatTime = (timeArray) => `${String(timeArray[0]).padStart(2, '0')}:${String(timeArray[1]).padStart(2, '0')}`;
+  const formatTime = (timeArray) => `${String(timeArray[0]).padStart(2, '0')}:${String(timeArray[1]).padStart(2, '0')}`;
 
-    return `
+  return `
 📅 ${day} ${monthNameRussianCapitalized}
 
 🏙 Фаджр: ${formatTime(dayData.Fajr)}
@@ -140,282 +124,258 @@ function getPrayerTimesForToday() {
 `;
 }
 
-// Получить таблицу времен намазов за месяц (улучшенная верстка)
 function getPrayerTimesTableForMonth(monthNameEnglish) {
-    const monthData = timesDb[monthNameEnglish];
-    if (!monthData) {
-        return `Ошибка: данные для месяца "${monthNameEnglish}" не найдены.`;
+  const monthData = timesDb[monthNameEnglish];
+  if (!monthData) {
+    return `Ошибка: данные для месяца "${monthNameEnglish}" не найдены.`;
+  }
+
+  const monthNameRussian = getRussianMonthName(monthNameEnglish);
+  const monthNameRussianCapitalized = monthNameRussian ? (monthNameRussian.charAt(0).toUpperCase() + monthNameRussian.slice(1)) : monthNameEnglish;
+
+  const formatTime = (timeArray) => {
+    if (!timeArray || timeArray.length < 2) return "--:--";
+    return `${String(timeArray[0]).padStart(2, '0')}:${String(timeArray[1]).padStart(2, '0')}`;
+  };
+
+  const dayWidth = 4;
+  const timeWidth = 5;
+
+  const header = `Времена намазов на ${monthNameRussianCapitalized}\n\n`;
+  const columnHeader = `<pre>` +
+    `День`.padEnd(dayWidth, ' ') + '│' +
+    `Фаджр`.padEnd(timeWidth, ' ') + '│' +
+    `Восх.`.padEnd(timeWidth, ' ') + '│' +
+    `Зухр`.padEnd(timeWidth, ' ') + '│' +
+    `Аср`.padEnd(timeWidth, ' ') + '│' +
+    `Магр.`.padEnd(timeWidth, ' ') + '│' +
+    `Иша`.padEnd(timeWidth, ' ') + '\n' +
+    ''.padEnd(dayWidth + 1 + timeWidth * 6 + 6, '─') + '\n';
+
+  let tableBody = '';
+
+  for (let day = 1; day <= 31; day++) {
+    const dayStr = day.toString().padStart(2, '0');
+    const dayData = monthData[dayStr];
+
+    let row = day.toString().padEnd(dayWidth, ' ') + '│';
+
+    if (dayData) {
+      row += formatTime(dayData.Fajr).padEnd(timeWidth, ' ') + '│';
+      row += formatTime(dayData.Sunrise).padEnd(timeWidth, ' ') + '│';
+      row += formatTime(dayData.Dhuhr).padEnd(timeWidth, ' ') + '│';
+      row += formatTime(dayData.Asr).padEnd(timeWidth, ' ') + '│';
+      row += formatTime(dayData.Maghrib).padEnd(timeWidth, ' ') + '│';
+      row += formatTime(dayData.Isha).padEnd(timeWidth, ' ');
+    } else {
+      row += ''.padEnd((timeWidth + 1) * 6 - 1, ' ');
     }
+    tableBody += row + '\n';
+  }
 
-    // Получаем русское название для заголовка
-    const monthNameRussian = getRussianMonthName(monthNameEnglish);
-    const monthNameRussianCapitalized = monthNameRussian ? (monthNameRussian.charAt(0).toUpperCase() + monthNameRussian.slice(1)) : monthNameEnglish;
-
-    // Форматируем время в HH:MM
-    const formatTime = (timeArray) => {
-         if (!timeArray || timeArray.length < 2) return "--:--"; // Обработка отсутствующих данных
-         return `${String(timeArray[0]).padStart(2, '0')}:${String(timeArray[1]).padStart(2, '0')}`;
-    };
-
-    // Определяем максимальную ширину для каждого столбца (в символах моноширинного шрифта)
-    const dayWidth = 4; // "День"
-    const timeWidth = 5; // "ЧЧ:MM"
-
-    // Создаем заголовок таблицы
-    const header = `Времена намазов на ${monthNameRussianCapitalized}\n\n`;
-    const columnHeader = `<pre>` +
-        `День`.padEnd(dayWidth, ' ') + '│' +
-        `Фаджр`.padEnd(timeWidth, ' ') + '│' +
-        `Восх.`.padEnd(timeWidth, ' ') + '│' +
-        `Зухр`.padEnd(timeWidth, ' ') + '│' +
-        `Аср`.padEnd(timeWidth, ' ') + '│' +
-        `Магр.`.padEnd(timeWidth, ' ') + '│' +
-        `Иша`.padEnd(timeWidth, ' ') + '\n' +
-        ''.padEnd(dayWidth + 1 + timeWidth * 6 + 6, '─') + '\n'; // Линия под заголовком
-
-    let tableBody = '';
-
-    // Проходим по всем дням от 1 до 31
-    for (let day = 1; day <= 31; day++) {
-        const dayStr = day.toString().padStart(2, '0');
-        const dayData = monthData[dayStr];
-
-        let row = day.toString().padEnd(dayWidth, ' ') + '│'; // Номер дня слева
-
-        if (dayData) {
-            // Если данные есть, добавляем их
-            row += formatTime(dayData.Fajr).padEnd(timeWidth, ' ') + '│';
-            row += formatTime(dayData.Sunrise).padEnd(timeWidth, ' ') + '│';
-            row += formatTime(dayData.Dhuhr).padEnd(timeWidth, ' ') + '│';
-            row += formatTime(dayData.Asr).padEnd(timeWidth, ' ') + '│';
-            row += formatTime(dayData.Maghrib).padEnd(timeWidth, ' ') + '│';
-            row += formatTime(dayData.Isha).padEnd(timeWidth, ' ');
-        } else {
-            // Если данных нет (например, 31 февраля), заполняем "--:--"
-             row += ''.padEnd((timeWidth + 1) * 6 - 1, ' '); // Заполняем всю оставшуюся строку пробелами
-        }
-        tableBody += row + '\n';
-    }
-
-    const footer = `</pre>`;
-    return header + columnHeader + tableBody + footer;
+  const footer = `</pre>`;
+  return header + columnHeader + tableBody + footer;
 }
 
-
-// Получить список месяцев с кнопками (на русском)
 function getMonthsList() {
-    const russianMonths = Object.keys(russianToEnglishMonth);
-    const keyboard = [];
-    // Разбиваем на строки по 3 месяца
-    for (let i = 0; i < russianMonths.length; i += 3) {
-        const row = russianMonths.slice(i, i + 3).map(russianMonth => ({
-            text: russianMonth.charAt(0).toUpperCase() + russianMonth.slice(1), // С большой буквы
-            callback_data: `month_${russianMonth}` // Callback с русским названием
-        }));
-        keyboard.push(row);
+  const russianMonths = Object.keys(russianToEnglishMonth);
+  const keyboard = [];
+  for (let i = 0; i < russianMonths.length; i += 3) {
+    const row = russianMonths.slice(i, i + 3).map(russianMonth => ({
+      text: russianMonth.charAt(0).toUpperCase() + russianMonth.slice(1),
+      callback_data: `month_${russianMonth}`
+    }));
+    keyboard.push(row);
+  }
+  return {
+    reply_markup: {
+      inline_keyboard: keyboard
     }
-    return {
-        reply_markup: {
-            inline_keyboard: keyboard
-        }
-    };
+  };
 }
+
+// --- Inline меню с командами ---
+const inlineMenu = {
+  reply_markup: {
+    inline_keyboard: [
+      [
+        { text: '🕌 Времена на сегодня /day', callback_data: 'cmd_day' },
+        { text: '📅 Текущий месяц /month', callback_data: 'cmd_month' }
+      ],
+      [
+        { text: '🗓️ Выбрать месяц /year', callback_data: 'cmd_year' },
+        { text: '💬 Новая цитата /newquote', callback_data: 'cmd_newquote' }
+      ],
+      [
+        { text: '📊 Статистика /stats', callback_data: 'cmd_stats' },
+        { text: '❓ Помощь /help', callback_data: 'cmd_help' }
+      ]
+    ]
+  }
+};
 
 // --- Обработчики команд ---
 
-// Команда /start
 bot.start((ctx) => {
-  const userId = ctx.from.id;
-  addUser(userId); // Добавляем пользователя при первом взаимодействии
+  addUser(ctx.from.id);
 
   const welcomeMessage = `
 🌟 Рузнама - Курахский район
 
 «Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи и аль-Хаким)
 
-Команды:
-/day - Времена намазов на сегодня 🕌
-/month - Таблица времен намазов на текущий месяц 📅
-/year - Выбрать месяц для таблицы времен намазов 🗓️
-/newquote - Высказывания
-/help - Помощь
-/about - О боте
-/stats - Статистика бота 📊
+Выберите команду ниже:
   `;
-  ctx.reply(welcomeMessage);
+
+  ctx.reply(welcomeMessage, inlineMenu);
 });
 
-// Команда /help
 bot.help((ctx) => {
-  const userId = ctx.from.id;
-  addUser(userId);
+  addUser(ctx.from.id);
 
   ctx.reply(`
 📖 Цитатный Бот
 
-/day - Времена намазов на сегодня 🕌
-/month - Таблица времен намазов на текущий месяц 📅
-/year - Выбрать месяц для таблицы времен намазов 🗓️
-/newquote - Получить случайную цитату
-/about - Информация о боте
-/stats - Статистика бота 📊
-/start - Начать заново
-  `);
+Команды доступны в меню ниже.
+  `, inlineMenu);
 });
 
-// Команда /about
 bot.command('about', (ctx) => {
-  const userId = ctx.from.id;
-  addUser(userId);
+  addUser(ctx.from.id);
 
   ctx.reply(`
-🤖 Рузнама Бот v1.0
+🤖 Рузнама Бот v1.1
 🕌 Времена намазов доступны
 📚 Хадис в базе: ${quotes.length}
-  `);
+  `, inlineMenu);
 });
 
-// Новая команда /stats для просмотра статистики
 bot.command('stats', (ctx) => {
-  const userId = ctx.from.id;
-  addUser(userId);
+  addUser(ctx.from.id);
 
   ctx.reply(`
 📊 Статистика бота:
 👥 Пользователей: ${getUserCount()}
 📚 Цитат в базе: ${quotes.length}
 🕌 Месяцев с временами намазов: ${Object.keys(timesDb).length}
-  `);
+  `, inlineMenu);
 });
 
-// Команда /newquote
 bot.command('newquote', (ctx) => {
-  const userId = ctx.from.id;
-  addUser(userId);
+  addUser(ctx.from.id);
 
   const quote = getRandomQuote();
   const message = `❝ ${quote.text} ❞\n\n— ${quote.author}`;
-  ctx.reply(message);
+  ctx.reply(message, inlineMenu);
 });
 
-// --- Новые команды для времен намазов ---
-
-// Команда /day
 bot.command('day', (ctx) => {
-    const userId = ctx.from.id;
-    addUser(userId);
+  addUser(ctx.from.id);
 
-    const prayerTimesMessage = getPrayerTimesForToday();
-    ctx.reply(prayerTimesMessage, { parse_mode: 'HTML' });
+  const prayerTimesMessage = getPrayerTimesForToday();
+  ctx.reply(prayerTimesMessage, { parse_mode: 'HTML', ...inlineMenu });
 });
 
-// Команда /month
 bot.command('month', (ctx) => {
-    const userId = ctx.from.id;
-    addUser(userId);
+  addUser(ctx.from.id);
 
-    const now = new Date();
-    // Получаем английское название текущего месяца для поиска в timesDb
-    const monthNameEnglish = now.toLocaleString('en-GB', { month: 'long' });
+  const now = new Date();
+  const monthNameEnglish = now.toLocaleString('en-GB', { month: 'long' });
 
-    const tableMessage = getPrayerTimesTableForMonth(monthNameEnglish);
-    // Используем HTML для форматирования таблицы
-    ctx.reply(tableMessage, { parse_mode: 'HTML' });
+  const tableMessage = getPrayerTimesTableForMonth(monthNameEnglish);
+  ctx.reply(tableMessage, { parse_mode: 'HTML', ...inlineMenu });
 });
 
-// Команда /year
 bot.command('year', (ctx) => {
-    const userId = ctx.from.id;
-    addUser(userId);
+  addUser(ctx.from.id);
 
-    ctx.reply('Выберите месяц:', getMonthsList());
+  ctx.reply('Выберите месяц:', getMonthsList());
 });
 
-// Обработка текстовых сообщений
 bot.on('text', (ctx) => {
-  const userId = ctx.from.id;
-  addUser(userId);
+  addUser(ctx.from.id);
 
   const text = ctx.message.text.toLowerCase();
 
-  if (text === 'цитата' || text === 'quote') {
-    const quote = getRandomQuote();
-    const message = `❝ ${quote.text} ❞\n\n— ${quote.author}`;
-    ctx.reply(message);
-  } else if (text === 'помощь' || text === 'help') {
-    ctx.reply(`
-📖 Цитатный Бот
-
-/newquote - Получить случайную цитату
-/about - Информация о боте
-/stats - Статистика бота 📊
-/day - Времена намазов на сегодня 🕌
-/month - Таблица времен намазов на текущий месяц 📅
-/year - Выбрать месяц для таблицы времен намазов 🗓️
-/start - Начать заново
-    `);
-  } else if (text === 'статистика' || text === 'stats') {
-    ctx.reply(`
-📊 Статистика бота:
-👥 Пользователей: ${getUserCount()}
-📚 Цитат в базе: ${quotes.length}
-🕌 Месяцев с временами намазов: ${Object.keys(timesDb).length}
-    `);
-  } else if (text === 'день' || text === 'day') {
-      const prayerTimesMessage = getPrayerTimesForToday();
-      ctx.reply(prayerTimesMessage, { parse_mode: 'HTML' });
-  } else if (text === 'месяц' || text === 'month') {
-      const now = new Date();
-      const monthNameEnglish = now.toLocaleString('en-GB', { month: 'long' });
-
-      const tableMessage = getPrayerTimesTableForMonth(monthNameEnglish);
-      ctx.reply(tableMessage, { parse_mode: 'HTML' });
-  } else if (text === 'год' || text === 'year') {
-      ctx.reply('Выберите месяц:', getMonthsList());
-  } else {
-    ctx.reply('Отправь "цитата" или используй команду /newquote для получения случайной цитаты!\nИли /stats для просмотра статистики 📊\nИли /day, /month, /year для времен намазов 🕌');
-  }
+  // Здесь можно добавить обработку текстовых команд как раньше, но проще пользоваться кнопками
+  ctx.reply('Пожалуйста, используйте кнопки меню для выбора команды.', inlineMenu);
 });
 
-// Обработка callback-запросов
+// --- Обработка callback-запросов ---
+
 bot.on('callback_query', async (ctx) => {
   const userId = ctx.callbackQuery.from.id;
   addUser(userId);
 
   const data = ctx.callbackQuery.data;
 
-  if (data === 'new_quote') {
-    const quote = getRandomQuote();
-    const message = `❝ ${quote.text} ❞\n\n— ${quote.author}`;
+  try {
+    if (data === 'cmd_day') {
+      await ctx.answerCbQuery();
+      const dayMessage = getPrayerTimesForToday();
+      await ctx.editMessageText(dayMessage, { parse_mode: 'HTML', ...inlineMenu });
+    } else if (data === 'cmd_month') {
+      await ctx.answerCbQuery();
+      const now = new Date();
+      const monthNameEnglish = now.toLocaleString('en-GB', { month: 'long' });
+      const monthMessage = getPrayerTimesTableForMonth(monthNameEnglish);
+      await ctx.editMessageText(monthMessage, { parse_mode: 'HTML', ...inlineMenu });
+    } else if (data === 'cmd_year') {
+      await ctx.answerCbQuery();
+      await ctx.editMessageText('Выберите месяц:', getMonthsList());
+    } else if (data === 'cmd_newquote') {
+      await ctx.answerCbQuery();
+      const quote = getRandomQuote();
+      const quoteMsg = `❝ ${quote.text} ❞\n\n— ${quote.author}`;
+      await ctx.editMessageText(quoteMsg, inlineMenu);
+    } else if (data === 'cmd_stats') {
+      await ctx.answerCbQuery();
+      const statsMsg = `
+📊 Статистика бота:
+👥 Пользователей: ${getUserCount()}
+📚 Цитат в базе: ${quotes.length}
+🕌 Месяцев с временами намазов: ${Object.keys(timesDb).length}
+      `;
+      await ctx.editMessageText(statsMsg, inlineMenu);
+    } else if (data === 'cmd_help') {
+      await ctx.answerCbQuery();
+      await ctx.editMessageText(`
+📖 Цитатный Бот
 
-    await ctx.answerCbQuery();
-    await ctx.editMessageText(message, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '🔄 Еще цитату', callback_data: 'new_quote' }]
-        ]
-      }
-    });
-  } else if (data.startsWith('month_')) {
-      // Обработка выбора месяца из /year
+Команды доступны в меню.
+      `, inlineMenu);
+    } else if (data.startsWith('month_')) {
+      // Выбор месяца из меню /year
       const selectedRussianMonth = data.split('_')[1];
-      // Преобразуем русское название в английское
       const selectedEnglishMonth = getEnglishMonthName(selectedRussianMonth);
 
       if (!selectedEnglishMonth) {
-           await ctx.answerCbQuery('Ошибка: Месяц не найден', { show_alert: true });
-           return;
+        await ctx.answerCbQuery('Ошибка: Месяц не найден', { show_alert: true });
+        return;
       }
 
       const tableMessage = getPrayerTimesTableForMonth(selectedEnglishMonth);
 
-      await ctx.answerCbQuery(); // Подтверждаем callback
-      // Отправляем таблицу как новое сообщение
-       await ctx.reply(tableMessage, { parse_mode: 'HTML' });
-      // Или редактируем предыдущее сообщение с кнопками:
-      // await ctx.editMessageText(tableMessage, { parse_mode: 'HTML' });
+      await ctx.answerCbQuery();
+      await ctx.editMessageText(tableMessage, { parse_mode: 'HTML', ...inlineMenu });
+    } else {
+      await ctx.answerCbQuery('Неизвестная команда', { show_alert: true });
+    }
+  } catch (err) {
+    console.error('Ошибка в callback_query:', err);
+    await ctx.answerCbQuery('Произошла ошибка', { show_alert: true });
   }
 });
+
+// --- Регистрируем команды в Telegram для удобства ---
+bot.telegram.setMyCommands([
+  { command: 'day', description: 'Времена намазов на сегодня 🕌' },
+  { command: 'month', description: 'Текущий месяц' },
+  { command: 'year', description: 'Выбрать месяц' },
+  { command: 'newquote', description: 'Случайная цитата' },
+  { command: 'stats', description: 'Статистика бота' },
+  { command: 'help', description: 'Помощь' },
+]);
 
 // Webhook handler для Vercel
 module.exports = async (req, res) => {
@@ -428,7 +388,7 @@ module.exports = async (req, res) => {
   }
 };
 
-// Для локальной разработки (необязательно)
+// Локальный запуск
 if (process.env.NODE_ENV !== 'production') {
   bot.launch();
   console.log('Бот запущен локально!');
