@@ -207,9 +207,12 @@ const inlineMenu = {
         { text: '💬 Новая цитата /newquote', callback_data: 'cmd_newquote' }
       ],
       [
-        { text: '📊 Статистика /stats', callback_data: 'cmd_stats' },
+		{ text: 'ℹ️ About /about', callback_data: 'cmd_about' },
         { text: '❓ Помощь /help', callback_data: 'cmd_help' }
-      ]
+      ],
+	  [
+		{ text: '📊 Статистика /stats', callback_data: 'cmd_stats' }
+	  ]
     ]
   }
 };
@@ -373,8 +376,9 @@ bot.telegram.setMyCommands([
   { command: 'month', description: 'Текущий месяц' },
   { command: 'year', description: 'Выбрать месяц' },
   { command: 'newquote', description: 'Случайная цитата' },
-  { command: 'stats', description: 'Статистика бота' },
+  { command: 'about', description: 'About' },
   { command: 'help', description: 'Помощь' },
+  { command: 'stats', description: 'Статистика бота' }
 ]);
 
 // Webhook handler для Vercel
