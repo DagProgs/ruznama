@@ -185,11 +185,11 @@ const inlineMenu = {
         { text: '💬 Новая цитата /newquote', callback_data: 'cmd_newquote' }
       ],
       [
-        { text: '📊 Статистика /stats', callback_data: 'cmd_stats' },
+        { text: '❓ Помощь /help', callback_data: 'cmd_help' },
         { text: 'ℹ️ About /about', callback_data: 'cmd_about' }
       ],
       [
-        { text: '❓ Помощь /help', callback_data: 'cmd_help' }
+		{ text: '📊 Статистика /stats', callback_data: 'cmd_stats' }
       ]
     ]
   }
@@ -296,9 +296,9 @@ bot.on('callback_query', async (ctx) => {
     } else if (data === 'cmd_about') {
       await ctx.answerCbQuery();
       const msg = `
-🤖 Рузнама Бот v1.0
+🤖 Рузнама Бот v1.1
 🕌 Времена намазов доступны
-📚 Хадис в базе: ${quotes.length}
+📚 Цитат в базе: ${quotes.length}
       `;
       await ctx.editMessageText(msg, inlineMenu);
     } else if (data === 'cmd_help') {
@@ -325,7 +325,7 @@ bot.on('callback_query', async (ctx) => {
 
 // Регистрируем команды Telegram
 bot.telegram.setMyCommands([
-  { command: 'day', description: 'Времена намазов на сегодня 🕌' },
+  { command: 'day', description: 'Времена намазов на сегодня' },
   { command: 'month', description: 'Текущий месяц' },
   { command: 'year', description: 'Выбрать месяц' },
   { command: 'newquote', description: 'Случайная цитата' },
