@@ -1,0 +1,16 @@
+{
+  "name": "telegram-quotes-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for sending random quotes",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "NODE_ENV=development node index.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.12.2"
+  },
+  "keywords": ["telegram", "bot", "quotes"],
+  "author": "Your Name",
+  "license": "MIT"
+}
