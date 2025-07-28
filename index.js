@@ -328,15 +328,28 @@ bot.telegram.setMyCommands([
   { command: 'stats', description: 'Статистика бота' }
 ]);
 
-// Вебхук для Vercel
+// Вебхук для Vercel с ручным парсингом тела
 module.exports = async (req, res) => {
-  try {
-    await bot.handleUpdate(req.body);
-    res.status(200).send('OK');
-  } catch (e) {
-    console.error('Ошибка update:', e);
-    res.status(500).send('Error');
+  if (req.method !== 'POST') {
+    res.status(405).send('Method Not Allowed');
+    return;
   }
+
+  let body = '';
+  req.on('data', chunk => {
+    body += chunk.toString();
+  });
+
+  req.on('end', async () => {
+    try {
+      const update = JSON.parse(body);
+      await bot.handleUpdate(update);
+      res.status(200).send('OK');
+    } catch (e) {
+      console.error('Ошибка update:', e);
+      res.status(500).send('Error');
+    }
+  });
 };
 
 // Локальный запуск
