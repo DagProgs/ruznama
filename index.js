@@ -178,12 +178,12 @@ const inlineMenu = {
   reply_markup: {
     inline_keyboard: [
       [
-        { text: '🕌 Времена на сегодня /day', callback_data: 'cmd_day' },
-        { text: '📅 Текущий месяц /month', callback_data: 'cmd_month' }
+        { text: '🕌 День', callback_data: 'cmd_day' },
+        { text: '📅 Месяц', callback_data: 'cmd_month' }
       ],
       [
-        { text: '🗓️ Выбрать месяц /year', callback_data: 'cmd_year' },
-        { text: '💬 Новый Хадис /newquote', callback_data: 'cmd_newquote' }
+        { text: '🗓️ Год', callback_data: 'cmd_year' },
+        { text: '💬 Хадис', callback_data: 'cmd_newquote' }
       ]
     ]
   }
