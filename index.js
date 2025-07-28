@@ -173,6 +173,7 @@ function getMonthsList() {
   return { reply_markup: { inline_keyboard: keyboard } };
 }
 
+// Убраны кнопки Помощь, About и Статистика из главного меню
 const inlineMenu = {
   reply_markup: {
     inline_keyboard: [
@@ -182,14 +183,7 @@ const inlineMenu = {
       ],
       [
         { text: '🗓️ Выбрать месяц /year', callback_data: 'cmd_year' },
-        { text: '💬 Новая цитата /newquote', callback_data: 'cmd_newquote' }
-      ],
-      [
-        { text: '❓ Помощь /help', callback_data: 'cmd_help' },
-        { text: 'ℹ️ About /about', callback_data: 'cmd_about' }
-      ],
-      [
-		{ text: '📊 Статистика /stats', callback_data: 'cmd_stats' }
+        { text: '💬 Новый Хадис /newquote', callback_data: 'cmd_newquote' }
       ]
     ]
   }
@@ -215,9 +209,9 @@ bot.help((ctx) => {
 bot.command('about', (ctx) => {
   addUser(ctx.from.id);
   ctx.reply(`
-🤖 Рузнама Бот v1.1
+🤖 Рузнама Бот v1.2
 🕌 Времена намазов доступны
-📚 Цитат в базе: ${quotes.length}
+📚 Хадис в базе: ${quotes.length}
   `, inlineMenu);
 });
 
@@ -226,7 +220,7 @@ bot.command('stats', (ctx) => {
   ctx.reply(`
 📊 Статистика бота:
 👥 Пользователей: ${getUserCount()}
-📚 Цитат в базе: ${quotes.length}
+📚 Хадис в базе: ${quotes.length}
 🕌 Месяцев с временами намазов: ${Object.keys(timesDb).length}
   `, inlineMenu);
 });
@@ -289,16 +283,16 @@ bot.on('callback_query', async (ctx) => {
       const msg = `
 📊 Статистика бота:
 👥 Пользователей: ${getUserCount()}
-📚 Цитат в базе: ${quotes.length}
+📚 Хадис в базе: ${quotes.length}
 🕌 Месяцев с временами намазов: ${Object.keys(timesDb).length}
       `;
       await ctx.editMessageText(msg, inlineMenu);
     } else if (data === 'cmd_about') {
       await ctx.answerCbQuery();
       const msg = `
-🤖 Рузнама Бот v1.1
+🤖 Рузнама Бот v1.2
 🕌 Времена намазов доступны
-📚 Цитат в базе: ${quotes.length}
+📚 Хадис в базе: ${quotes.length}
       `;
       await ctx.editMessageText(msg, inlineMenu);
     } else if (data === 'cmd_help') {
@@ -329,9 +323,9 @@ bot.telegram.setMyCommands([
   { command: 'month', description: 'Текущий месяц' },
   { command: 'year', description: 'Выбрать месяц' },
   { command: 'newquote', description: 'Случайная цитата' },
-  { command: 'stats', description: 'Статистика бота' },
   { command: 'about', description: 'О боте' },
-  { command: 'help', description: 'Помощь' }
+  { command: 'help', description: 'Помощь' },
+  { command: 'stats', description: 'Статистика бота' }
 ]);
 
 // Вебхук для Vercel
