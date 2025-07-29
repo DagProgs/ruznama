@@ -2,6 +2,7 @@ const { Telegraf } = require('telegraf');
 const fs = require('fs');
 const path = require('path');
 
+// === ТОКЕН ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN не установлен');
@@ -9,11 +10,11 @@ if (!BOT_TOKEN) {
 
 const bot = new Telegraf(BOT_TOKEN);
 
-// Путь к файлам
+// === ПУТИ К ФАЙЛАМ ===
 const citiesAreasPath = path.join(__dirname, 'db', 'cities-areas.json');
 const timesDir = path.join(__dirname, 'db', 'cities-areas');
 
-// Загрузка списка городов и районов
+// === ЗАГРУЗКА ГОРОДОВ И РАЙОНОВ ===
 let citiesAreasData = { cities: [], areas: [] };
 try {
   if (fs.existsSync(citiesAreasPath)) {
@@ -26,7 +27,7 @@ try {
   console.error('Ошибка чтения cities-areas.json:', e);
 }
 
-// Маппинг месяцев
+// === МАППИНГ МЕСЯЦЕВ ===
 const russianToEnglishMonth = {
   январь: 'January',
   февраль: 'February',
@@ -56,33 +57,30 @@ function getRussianMonthName(enMonth) {
   return entry ? entry[0] : enMonth;
 }
 
-// Загрузка времён по ID
+// === ЗАГРУЗКА ВРЕМЁН ПО ID ===
 function loadTimesById(id) {
   const filePath = path.join(timesDir, `${id}.json`);
   try {
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath, 'utf8');
       const parsed = JSON.parse(data);
-      // Проверяем, что данные не пустые
-      if (Object.keys(parsed).length === 0) return null;
-      return parsed;
-    } else {
-      return null; // файл не существует
+      return Object.keys(parsed).length > 0 ? parsed : null;
     }
+    return null;
   } catch (e) {
     console.error(`Ошибка загрузки ${filePath}:`, e);
     return null;
   }
 }
 
-// Формат времени
+// === ФОРМАТИРОВАНИЕ ВРЕМЕНИ ===
 function fmt(time) {
   return time && Array.isArray(time) && time.length >= 2
     ? `${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}`
     : '--:--';
 }
 
-// Времена на сегодня
+// === ВРЕМЕНА НА СЕГОДНЯ ===
 function getPrayerTimesForToday(timesData) {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
@@ -106,7 +104,7 @@ function getPrayerTimesForToday(timesData) {
   `.trim();
 }
 
-// Таблица на месяц
+// === ТАБЛИЦА НА МЕСЯЦ ===
 function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за ${monthEn}`;
@@ -148,47 +146,47 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
   return header + colHeader + body + '</pre>';
 }
 
-// Список месяцев
+// === СПИСОК МЕСЯЦЕВ (с ID места) ===
 function getMonthsList(locationId) {
   const ruMonths = Object.keys(russianToEnglishMonth);
   const keyboard = [];
   for (let i = 0; i < ruMonths.length; i += 3) {
     const row = ruMonths.slice(i, i + 3).map(m => ({
       text: m.charAt(0).toUpperCase() + m.slice(1),
-      callback_ `select_month_${m}_${locationId}`
+      callback_data: `select_month_${m}_${locationId}`
     }));
     keyboard.push(row);
   }
-  keyboard.push([{ text: '⬅️ Назад', callback_ `back_to_loc_${locationId}` }]);
+  keyboard.push([{ text: '⬅️ Назад', callback_data: `back_to_loc_${locationId}` }]);
   return { reply_markup: { inline_keyboard: keyboard } };
 }
 
-// Клавиатура для выбранного места
+// === КЛАВИАТУРА ДЛЯ МЕСТА ===
 function getLocationMenu(locationId) {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '🕌 День', callback_ `day_${locationId}` }],
-        [{ text: '📅 Месяц', callback_ `month_${locationId}` }],
-        [{ text: '🗓️ Год', callback_ `year_${locationId}` }],
+        [{ text: '🕌 День', callback_data: `day_${locationId}` }],
+        [{ text: '📅 Месяц', callback_data: `month_${locationId}` }],
+        [{ text: '🗓️ Год', callback_data: `year_${locationId}` }],
         [{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]
       ]
     }
   };
 }
 
-// Главное меню
+// === ГЛАВНОЕ МЕНЮ ===
 const mainMenu = {
   reply_markup: {
     inline_keyboard: [
-      [{ text: '🏙 Города', callback_ 'cmd_cities' }],
-      [{ text: '🏘 Районы', callback_ 'cmd_areas' }],
-      [{ text: '💬 Хадис', callback_ 'cmd_quote' }]
+      [{ text: '🏙 Города', callback_data: 'cmd_cities' }],
+      [{ text: '🏘 Районы', callback_data: 'cmd_areas' }],
+      [{ text: '💬 Хадис', callback_data: 'cmd_quote' }]
     ]
   }
 };
 
-// Загрузка пользователей
+// === РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ===
 const usersFilePath = path.join(__dirname, 'users.json');
 let users = new Set();
 
@@ -221,19 +219,19 @@ function addUser(userId) {
   }
 }
 
-// Хадис
+// === ХАДИС ===
 const quotes = require('./quotes.json');
 function getRandomQuote() {
   return quotes[Math.floor(Math.random() * quotes.length)];
 }
 
-// Базовые команды
+// === СТАРТ ===
 bot.start((ctx) => {
   addUser(ctx.from.id);
   ctx.reply('📅⏰ Рузнама - Курахский район\n«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи и аль-Хаким)\nВыберите команду ниже:', mainMenu);
 });
 
-// Обработка callback
+// === ОБРАБОТКА КНОПОК ===
 bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
@@ -245,42 +243,42 @@ bot.on('callback_query', async (ctx) => {
     console.warn('Не удалось answerCbQuery:', e);
   }
 
-  // Главное меню
+  // === Назад в главное меню ===
   if (data === 'cmd_cities_areas') {
     return await ctx.editMessageText('Выберите:', mainMenu.reply_markup);
   }
 
-  // Показать города
+  // === Показать города ===
   if (data === 'cmd_cities') {
     const citiesList = citiesAreasData.cities
       .map(c => `🏙 <b>${c.name_cities}</b>`)
       .join('\n');
     const keyboard = citiesAreasData.cities.map(c => [
-      { text: c.name_cities, callback_ `loc_${c.id}` }
+      { text: c.name_cities, callback_data: `loc_${c.id}` }
     ]);
-    keyboard.push([{ text: '⬅️ Назад', callback_ 'cmd_cities_areas' }]);
+    keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
     await ctx.editMessageText(`<b>Список городов:</b>\n\n${citiesList}`, {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: keyboard }
     });
   }
 
-  // Показать районы
+  // === Показать районы ===
   if (data === 'cmd_areas') {
     const areasList = citiesAreasData.areas
       .map(a => `🏘 <b>${a.name_areas}</b>`)
       .join('\n');
     const keyboard = citiesAreasData.areas.map(a => [
-      { text: a.name_areas, callback_ `loc_${a.id}` }
+      { text: a.name_areas, callback_data: `loc_${a.id}` }
     ]);
-    keyboard.push([{ text: '⬅️ Назад', callback_ 'cmd_cities_areas' }]);
+    keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
     await ctx.editMessageText(`<b>Список районов:</b>\n\n${areasList}`, {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: keyboard }
     });
   }
 
-  // Выбор места
+  // === Выбор места (город/район) ===
   if (data.startsWith('loc_')) {
     const id = data.split('_')[1];
     const all = [...citiesAreasData.cities, ...citiesAreasData.areas];
@@ -306,7 +304,7 @@ bot.on('callback_query', async (ctx) => {
     );
   }
 
-  // Время на день
+  // === Время на день ===
   if (data.startsWith('day_')) {
     const id = data.split('_')[1];
     const timesData = loadTimesById(id);
@@ -330,7 +328,7 @@ bot.on('callback_query', async (ctx) => {
     );
   }
 
-  // Время на месяц
+  // === Время на месяц ===
   if (data.startsWith('month_') && !data.includes('select_month')) {
     const id = data.split('_')[1];
     const timesData = loadTimesById(id);
@@ -355,7 +353,7 @@ bot.on('callback_query', async (ctx) => {
     );
   }
 
-  // Год — выбор месяца
+  // === Год — выбор месяца ===
   if (data.startsWith('year_')) {
     const id = data.split('_')[1];
     const timesData = loadTimesById(id);
@@ -370,7 +368,7 @@ bot.on('callback_query', async (ctx) => {
     await ctx.editMessageText('📅 Выберите месяц:', getMonthsList(id));
   }
 
-  // Выбор месяца после "Год"
+  // === Выбор месяца ===
   if (data.startsWith('select_month_')) {
     const parts = data.split('_');
     const ruMonth = parts[2];
@@ -402,7 +400,7 @@ bot.on('callback_query', async (ctx) => {
     );
   }
 
-  // Назад к месту
+  // === Назад к месту ===
   if (data.startsWith('back_to_loc_')) {
     const id = data.split('_')[3];
     const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
@@ -427,39 +425,42 @@ bot.on('callback_query', async (ctx) => {
     );
   }
 
-  // Хадис
+  // === Хадис ===
   if (data === 'cmd_quote') {
     const q = getRandomQuote();
     await ctx.editMessageText(`❝ ${q.text} ❞\n— ${q.author}`, mainMenu);
   }
 });
 
-// Загрузка пользователей при старте
+// === ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ ===
 loadUsers();
 
-// Vercel Webhook
+// === VERCCEL WEBHOOK (ПРАВИЛЬНЫЙ) ===
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
-    res.status(405).send('Method Not Allowed');
-    return;
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
-  let body = '';
-  req.on('data', chunk => body += chunk.toString());
-  req.on('end', async () => {
-    try {
-      const update = JSON.parse(body);
-      await bot.handleUpdate(update);
-      res.status(200).send('OK');
-    } catch (e) {
-      console.error('Ошибка обработки update:', e);
-      res.status(500).send('Error');
+
+  try {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
     }
-  });
+    const body = Buffer.concat(chunks).toString();
+    const update = JSON.parse(body);
+    await bot.handleUpdate(update);
+    res.status(200).json({ ok: true });
+  } catch (e) {
+    console.error('Ошибка в Webhook:', e);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 };
 
-// Локальный запуск
+// === ЛОКАЛЬНЫЙ ЗАПУСК ===
 if (process.env.NODE_ENV !== 'production') {
-  bot.launch();
-  console.log('Бот запущен локально');
-  console.log(`Пользователей: ${users.size}`);
+  bot.launch().then(() => {
+    console.log('Бот запущен локально');
+    console.log(`Пользователей: ${users.size}`);
+  });
 }
