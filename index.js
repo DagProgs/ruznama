@@ -11,6 +11,21 @@ if (!BOT_TOKEN) {
 
 const bot = new Telegraf(BOT_TOKEN);
 
+// Загрузка данных городов и районов
+const citiesAreasPath = path.join(__dirname, 'db', 'cities-areas.json');
+let citiesAreasData = { cities: [], areas: [] };
+
+try {
+  if (fs.existsSync(citiesAreasPath)) {
+    const data = fs.readFileSync(citiesAreasPath, 'utf8');
+    citiesAreasData = JSON.parse(data);
+  } else {
+    console.warn('Файл cities-areas.json не найден в папке db');
+  }
+} catch (e) {
+  console.error('Ошибка чтения cities-areas.json:', e);
+}
+
 // Маппинг месяцев
 const russianToEnglishMonth = {
   январь: 'January',
@@ -95,18 +110,13 @@ function getPrayerTimesForToday() {
   const day = String(now.getDate()).padStart(2, '0');
   const monthRu = now.toLocaleString('ru-RU', { month: 'long' });
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
   const monthData = timesDb[monthEn];
   if (!monthData) return `Ошибка: данных для месяца "${monthEn}" нет.`;
-
   const dayData = monthData[day];
   if (!dayData) return `Ошибка: данных для ${day} ${monthRuCap} нет.`;
-
   const fmt = (arr) => `${String(arr[0]).padStart(2,'0')}:${String(arr[1]).padStart(2,'0')}`;
-
   return `
 📅 ${day} ${monthRuCap}
-
 🏙 Фаджр: ${fmt(dayData.Fajr)}
 🌅 Восход: ${fmt(dayData.Sunrise)}
 🌇 Зухр: ${fmt(dayData.Dhuhr)}
@@ -119,16 +129,12 @@ function getPrayerTimesForToday() {
 function getPrayerTimesTableForMonth(monthEn) {
   const monthData = timesDb[monthEn];
   if (!monthData) return `Ошибка: данных для месяца "${monthEn}" нет.`;
-
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
   const fmt = (arr) => arr && arr.length >= 2 ? `${String(arr[0]).padStart(2,'0')}:${String(arr[1]).padStart(2,'0')}` : '--:--';
-
   const dayW = 4;
   const timeW = 5;
-
-  let header = `Времена намазов на ${monthRuCap}\n\n`;
+  let header = `Времена намазов на ${monthRuCap}\n`;
   let colHeader = `<pre>` +
     'День'.padEnd(dayW,' ') + '│' +
     'Фаджр'.padEnd(timeW,' ') + '│' +
@@ -138,9 +144,8 @@ function getPrayerTimesTableForMonth(monthEn) {
     'Магр.'.padEnd(timeW,' ') + '│' +
     'Иша'.padEnd(timeW,' ') + '\n' +
     ''.padEnd(dayW + 1 + timeW*6 + 6, '─') + '\n';
-
   let body = '';
-  for(let d=1; d<=31; d++) {
+  for(let d = 1; d <= 31; d++) {
     const dayStr = String(d).padStart(2,'0');
     const dayData = monthData[dayStr];
     let row = d.toString().padEnd(dayW,' ') + '│';
@@ -156,15 +161,14 @@ function getPrayerTimesTableForMonth(monthEn) {
     }
     body += row + '\n';
   }
-
   return header + colHeader + body + '</pre>';
 }
 
 function getMonthsList() {
   const ruMonths = Object.keys(russianToEnglishMonth);
   const keyboard = [];
-  for(let i=0; i<ruMonths.length; i+=3) {
-    const row = ruMonths.slice(i,i+3).map(m => ({
+  for(let i = 0; i < ruMonths.length; i += 3) {
+    const row = ruMonths.slice(i, i + 3).map(m => ({
       text: m.charAt(0).toUpperCase() + m.slice(1),
       callback_data: `month_${m}`
     }));
@@ -173,7 +177,7 @@ function getMonthsList() {
   return { reply_markup: { inline_keyboard: keyboard } };
 }
 
-// Убраны кнопки Помощь, About и Статистика из главного меню
+// Главное меню с новыми кнопками
 const inlineMenu = {
   reply_markup: {
     inline_keyboard: [
@@ -184,18 +188,21 @@ const inlineMenu = {
       [
         { text: '🗓️ Год', callback_data: 'cmd_year' },
         { text: '💬 Хадис', callback_data: 'cmd_newquote' }
+      ],
+      [
+        { text: '🏙 Города', callback_data: 'cmd_cities' },
+        { text: '🏘 Районы', callback_data: 'cmd_areas' }
       ]
     ]
   }
 };
 
+// Обработка команд
 bot.start((ctx) => {
   addUser(ctx.from.id);
   const welcome = `
 📅⏰ Рузнама - Курахский район
-
 «Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи и аль-Хаким)
-
 Выберите команду ниже:
   `;
   ctx.reply(welcome, inlineMenu);
@@ -203,7 +210,8 @@ bot.start((ctx) => {
 
 bot.help((ctx) => {
   addUser(ctx.from.id);
-  ctx.reply(`📖 Рузнама Бот\n\nИспользуйте кнопки меню для выбора команды.`, inlineMenu);
+  ctx.reply(`📖 Рузнама Бот
+Используйте кнопки меню для выбора команды.`, inlineMenu);
 });
 
 bot.command('about', (ctx) => {
@@ -228,7 +236,8 @@ bot.command('stats', (ctx) => {
 bot.command('newquote', (ctx) => {
   addUser(ctx.from.id);
   const q = getRandomQuote();
-  ctx.reply(`❝ ${q.text} ❞\n\n— ${q.author}`, inlineMenu);
+  ctx.reply(`❝ ${q.text} ❞
+— ${q.author}`, inlineMenu);
 });
 
 bot.command('day', (ctx) => {
@@ -255,6 +264,7 @@ bot.on('text', (ctx) => {
   ctx.reply('Пожалуйста, используйте кнопки меню для выбора команды.', inlineMenu);
 });
 
+// Обработка callback'ов
 bot.on('callback_query', async (ctx) => {
   addUser(ctx.callbackQuery.from.id);
   const data = ctx.callbackQuery.data;
@@ -276,7 +286,21 @@ bot.on('callback_query', async (ctx) => {
     } else if (data === 'cmd_newquote') {
       await ctx.answerCbQuery();
       const q = getRandomQuote();
-      const msg = `❝ ${q.text} ❞\n\n— ${q.author}`;
+      const msg = `❝ ${q.text} ❞\n— ${q.author}`;
+      await ctx.editMessageText(msg, inlineMenu);
+    } else if (data === 'cmd_cities') {
+      await ctx.answerCbQuery();
+      const citiesList = citiesAreasData.cities
+        .map(c => c.name_cities)
+        .join('\n');
+      const msg = `🏙 Список городов:\n\n${citiesList}`;
+      await ctx.editMessageText(msg, inlineMenu);
+    } else if (data === 'cmd_areas') {
+      await ctx.answerCbQuery();
+      const areasList = citiesAreasData.areas
+        .map(a => a.name_areas)
+        .join('\n');
+      const msg = `🏘 Список районов:\n\n${areasList}`;
       await ctx.editMessageText(msg, inlineMenu);
     } else if (data === 'cmd_stats') {
       await ctx.answerCbQuery();
@@ -297,7 +321,8 @@ bot.on('callback_query', async (ctx) => {
       await ctx.editMessageText(msg, inlineMenu);
     } else if (data === 'cmd_help') {
       await ctx.answerCbQuery();
-      await ctx.editMessageText(`📖 Цитатный Бот\n\nИспользуйте кнопки меню для выбора команды.`, inlineMenu);
+      await ctx.editMessageText(`📖 Рузнама Бот
+Используйте кнопки меню для выбора команды.`, inlineMenu);
     } else if (data.startsWith('month_')) {
       const ruMonth = data.split('_')[1];
       const enMonth = getEnglishMonthName(ruMonth);
@@ -317,7 +342,7 @@ bot.on('callback_query', async (ctx) => {
   }
 });
 
-// Регистрируем команды Telegram
+// Регистрация команд в Telegram
 bot.telegram.setMyCommands([
   { command: 'day', description: 'Времена намазов на сегодня' },
   { command: 'month', description: 'Текущий месяц' },
@@ -328,18 +353,16 @@ bot.telegram.setMyCommands([
   { command: 'stats', description: 'Статистика бота' }
 ]);
 
-// Вебхук для Vercel с ручным парсингом тела
+// Vercel Webhook
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).send('Method Not Allowed');
     return;
   }
-
   let body = '';
   req.on('data', chunk => {
     body += chunk.toString();
   });
-
   req.on('end', async () => {
     try {
       const update = JSON.parse(body);
