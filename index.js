@@ -4,21 +4,19 @@ const path = require('path');
 
 // === ТОКЕН ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
-if (!BOT_TOKEN) {
-  throw new Error('BOT_TOKEN не установлен');
-}
+if (!BOT_TOKEN) throw new Error('BOT_TOKEN не установлен');
 const bot = new Telegraf(BOT_TOKEN);
 
 // === ПУТИ К ФАЙЛАМ ===
 const citiesAreasPath = path.join(__dirname, 'db', 'cities-areas.json');
 const timesDir = path.join(__dirname, 'db', 'cities-areas');
+const usersFilePath = path.join(__dirname, 'users.json');
 
 // === ЗАГРУЗКА ГОРОДОВ И РАЙОНОВ ===
 let citiesAreasData = { cities: [], areas: [] };
 try {
   if (fs.existsSync(citiesAreasPath)) {
-    const data = fs.readFileSync(citiesAreasPath, 'utf8');
-    citiesAreasData = JSON.parse(data);
+    citiesAreasData = JSON.parse(fs.readFileSync(citiesAreasPath, 'utf8'));
   } else {
     console.warn('Файл cities-areas.json не найден');
   }
@@ -44,8 +42,7 @@ const russianToEnglishMonth = {
 
 function getEnglishMonthName(ruMonth) {
   if (ruMonth === 'now') {
-    const now = new Date();
-    return now.toLocaleString('en-GB', { month: 'long' });
+    return new Date().toLocaleString('en-GB', { month: 'long' });
   }
   const lower = ruMonth.toLowerCase().trim();
   return russianToEnglishMonth[lower] || null;
@@ -63,7 +60,7 @@ function loadTimesById(id) {
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath, 'utf8');
       const parsed = JSON.parse(data);
-      return Object.keys(parsed).length > 0 ? parsed : null;
+      return Object.keys(parsed).length ? parsed : null;
     }
     return null;
   } catch (e) {
@@ -74,7 +71,7 @@ function loadTimesById(id) {
 
 // === ФОРМАТИРОВАНИЕ ВРЕМЕНИ ===
 function fmt(time) {
-  return time && Array.isArray(time) && time.length >= 2
+  return Array.isArray(time) && time.length >= 2
     ? `${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}`
     : '--:--';
 }
@@ -86,10 +83,12 @@ function getPrayerTimesForToday(timesData) {
   const monthEn = now.toLocaleString('en-GB', { month: 'long' });
   const monthRu = now.toLocaleString('ru-RU', { month: 'long' });
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
+
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за ${monthEn}`;
   const dayData = monthData[day];
   if (!dayData) return `❌ Нет данных на ${day} ${monthRuCap}`;
+
   return `
 📅 ${day} ${monthRuCap}
 Фаджр: ${fmt(dayData.Fajr)}
@@ -109,6 +108,7 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
   const dayW = 4;
   const timeW = 5;
+
   let header = `Времена намазов на ${monthRuCap}\n`;
   let colHeader = `<pre>` +
     'День'.padEnd(dayW, ' ') + '│' +
@@ -119,6 +119,7 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
     'Магр.'.padEnd(timeW, ' ') + '│' +
     'Иша'.padEnd(timeW, ' ') + '\n' +
     ''.padEnd(dayW + 1 + timeW * 6 + 6, '─') + '\n';
+
   let body = '';
   for (let d = 1; d <= 31; d++) {
     const dayStr = String(d).padStart(2, '0');
@@ -136,20 +137,22 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
     }
     body += row + '\n';
   }
+
   return header + colHeader + body + '</pre>';
 }
 
 // === СПИСОК МЕСЯЦЕВ (с ID места) ===
 function getMonthsList(locationId) {
-  const ruMonths = Object.keys(russianToEnglishMonth);
-  const keyboard = [];
-  for (let i = 0; i < ruMonths.length; i += 3) {
-    const row = ruMonths.slice(i, i + 3).map(m => ({
-      text: m.charAt(0).toUpperCase() + m.slice(1),
-      callback_data: `select_month_${m}_${locationId}`
-    }));
-    keyboard.push(row);
-  }
+  const keyboard = Object.keys(russianToEnglishMonth)
+    .reduce((acc, month, index) => {
+      if (index % 3 === 0) acc.push([]);
+      const row = acc[acc.length - 1];
+      row.push({
+        text: month.charAt(0).toUpperCase() + month.slice(1),
+        callback_data: `select_month_${month}_${locationId}`
+      });
+      return acc;
+    }, []);
   keyboard.push([{ text: '⬅️ Назад', callback_data: `back_to_loc_${locationId}` }]);
   return { reply_markup: { inline_keyboard: keyboard } };
 }
@@ -180,15 +183,12 @@ const mainMenu = {
 };
 
 // === РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ===
-const usersFilePath = path.join(__dirname, 'users.json');
 let users = new Set();
 
 function loadUsers() {
   try {
     if (fs.existsSync(usersFilePath)) {
-      const data = fs.readFileSync(usersFilePath, 'utf8');
-      const loaded = JSON.parse(data);
-      users = new Set(loaded);
+      users = new Set(JSON.parse(fs.readFileSync(usersFilePath, 'utf8')));
     }
   } catch (e) {
     console.error('Ошибка загрузки users.json:', e);
@@ -221,7 +221,10 @@ function getRandomQuote() {
 // === СТАРТ ===
 bot.start((ctx) => {
   addUser(ctx.from.id);
-  ctx.reply('Рузнама - Курахский район\n«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи и аль-Хаким)\nВыберите команду ниже:', mainMenu);
+  ctx.reply(
+    '📅⏰ Рузнама - Курахский район\n«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи и аль-Хаким)\n\nВыберите команду ниже:',
+    mainMenu
+  );
 });
 
 // === ОБРАБОТКА КНОПОК ===
@@ -238,18 +241,17 @@ bot.on('callback_query', async (ctx) => {
 
   // === Назад в главное меню ===
   if (data === 'cmd_cities_areas') {
-    return await ctx.editMessageText('Выберите:', mainMenu.reply_markup);
+    return await ctx.editMessageText('Выберите:', mainMenu);
   }
 
   // === Показать города ===
   if (data === 'cmd_cities') {
-    // Только кликабельные кнопки с ID
     const keyboard = citiesAreasData.cities.map(c => [{
       text: `${c.name_cities} (${c.id})`,
       callback_data: `loc_${c.id}`
     }]);
     keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
-    await ctx.editMessageText(`<b>Список городов:</b>`, {
+    return await ctx.editMessageText('<b>Список городов:</b>', {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: keyboard }
     });
@@ -257,13 +259,12 @@ bot.on('callback_query', async (ctx) => {
 
   // === Показать районы ===
   if (data === 'cmd_areas') {
-    // Только кликабельные кнопки с ID
     const keyboard = citiesAreasData.areas.map(a => [{
       text: `${a.name_areas} (${a.id})`,
       callback_data: `loc_${a.id}`
     }]);
     keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
-    await ctx.editMessageText(`<b>Список районов:</b>`, {
+    return await ctx.editMessageText('<b>Список районов:</b>', {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: keyboard }
     });
@@ -272,21 +273,19 @@ bot.on('callback_query', async (ctx) => {
   // === Выбор места (город/район) ===
   if (data.startsWith('loc_')) {
     const id = data.split('_')[1];
-    const all = [...citiesAreasData.cities, ...citiesAreasData.areas];
-    const loc = all.find(l => l.id == id);
-    if (!loc) return await ctx.editMessageText('❌ Место не найдено.');
+    const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
 
     const timesData = loadTimesById(id);
     if (!timesData) {
-      const name = loc.name_cities || loc.name_areas;
       return await ctx.editMessageText(
-        `❌ Времена намазов для "${name}" пока что не добавлены.`,
+        `❌ Времена намазов для "${location.name_cities || location.name_areas}" пока не добавлены.`,
         mainMenu
       );
     }
 
-    const name = loc.name_cities || loc.name_areas;
-    await ctx.editMessageText(
+    const name = location.name_cities || location.name_areas;
+    return await ctx.editMessageText(
       `📍 Вы выбрали: <b>${name}</b>\nВыберите период:`,
       {
         parse_mode: 'HTML',
@@ -298,19 +297,17 @@ bot.on('callback_query', async (ctx) => {
   // === Время на день ===
   if (data.startsWith('day_')) {
     const id = data.split('_')[1];
+    const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(id);
     if (!timesData) {
-      const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
-      const name = loc ? (loc.name_cities || loc.name_areas) : 'Место';
-      return await ctx.editMessageText(
-        `❌ Времена намазов для "${name}" пока что не добавлены.`,
-        mainMenu
-      );
+      return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
     }
+
     const msg = getPrayerTimesForToday(timesData);
-    const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
-    const name = loc ? (loc.name_cities || loc.name_areas) : 'Место';
-    await ctx.editMessageText(
+    const name = location.name_cities || location.name_areas;
+    return await ctx.editMessageText(
       `📍 <b>${name}</b>\n${msg}`,
       {
         parse_mode: 'HTML',
@@ -319,23 +316,21 @@ bot.on('callback_query', async (ctx) => {
     );
   }
 
-  // === Время на месяц ===
-  if (data.startsWith('month_') && !data.includes('select_month')) {
+  // === Время на месяц (текущий) ===
+  if (data === `month_${data.split('_')[1]}` && data.startsWith('month_')) {
     const id = data.split('_')[1];
+    const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(id);
     if (!timesData) {
-      const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
-      const name = loc ? (loc.name_cities || loc.name_areas) : 'Место';
-      return await ctx.editMessageText(
-        `❌ Времена намазов для "${name}" пока что не добавлены.`,
-        mainMenu
-      );
+      return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
     }
+
     const monthEn = getEnglishMonthName('now');
     const msg = getPrayerTimesTableForMonth(timesData, monthEn);
-    const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
-    const name = loc ? (loc.name_cities || loc.name_areas) : 'Место';
-    await ctx.editMessageText(
+    const name = location.name_cities || location.name_areas;
+    return await ctx.editMessageText(
       `📍 <b>${name}</b>\n${msg}`,
       {
         parse_mode: 'HTML',
@@ -347,40 +342,34 @@ bot.on('callback_query', async (ctx) => {
   // === Год — выбор месяца ===
   if (data.startsWith('year_')) {
     const id = data.split('_')[1];
+    const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(id);
     if (!timesData) {
-      const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
-      const name = loc ? (loc.name_cities || loc.name_areas) : 'Место';
-      return await ctx.editMessageText(
-        `❌ Времена намазов для "${name}" пока что не добавлены.`,
-        mainMenu
-      );
+      return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
     }
-    await ctx.editMessageText('📅 Выберите месяц:', getMonthsList(id));
+
+    return await ctx.editMessageText('📅 Выберите месяц:', getMonthsList(id));
   }
 
   // === Выбор месяца ===
   if (data.startsWith('select_month_')) {
-    const parts = data.split('_');
-    const ruMonth = parts[2];
-    const locationId = parts[3];
+    const [_, __, ruMonth, locationId] = data.split('_');
     const enMonth = getEnglishMonthName(ruMonth);
-    if (!enMonth) {
-      return await ctx.editMessageText('❌ Месяц не найден.', getLocationMenu(locationId));
-    }
+    if (!enMonth) return await ctx.editMessageText('❌ Месяц не найден.', getLocationMenu(locationId));
+
+    const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == locationId);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(locationId);
     if (!timesData) {
-      const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == locationId);
-      const name = loc ? (loc.name_cities || loc.name_areas) : 'Место';
-      return await ctx.editMessageText(
-        `❌ Времена намазов для "${name}" пока что не добавлены.`,
-        mainMenu
-      );
+      return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
     }
+
     const msg = getPrayerTimesTableForMonth(timesData, enMonth);
-    const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == locationId);
-    const name = loc ? (loc.name_cities || loc.name_areas) : 'Место';
-    await ctx.editMessageText(
+    const name = location.name_cities || location.name_areas;
+    return await ctx.editMessageText(
       `📍 <b>${name}</b>\n${msg}`,
       {
         parse_mode: 'HTML',
@@ -392,18 +381,16 @@ bot.on('callback_query', async (ctx) => {
   // === Назад к месту ===
   if (data.startsWith('back_to_loc_')) {
     const id = data.split('_')[3];
-    const loc = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
-    if (!loc) return await ctx.editMessageText('❌ Место не найдено.');
+    const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(id);
     if (!timesData) {
-      const name = loc.name_cities || loc.name_areas;
-      return await ctx.editMessageText(
-        `❌ Времена намазов для "${name}" пока что не добавлены.`,
-        mainMenu
-      );
+      return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
     }
-    const name = loc.name_cities || loc.name_areas;
-    await ctx.editMessageText(
+
+    const name = location.name_cities || location.name_areas;
+    return await ctx.editMessageText(
       `📍 Вы выбрали: <b>${name}</b>\nВыберите период:`,
       {
         parse_mode: 'HTML',
@@ -415,25 +402,25 @@ bot.on('callback_query', async (ctx) => {
   // === Хадис ===
   if (data === 'cmd_quote') {
     const q = getRandomQuote();
-    await ctx.editMessageText(`❝ ${q.text} ❞\n— ${q.author}`, mainMenu);
+    return await ctx.editMessageText(`❝ ${q.text} ❞\n— ${q.author}`, mainMenu);
   }
 });
 
 // === ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ ===
 loadUsers();
 
-// === VERCCEL WEBHOOK (ПРАВИЛЬНЫЙ) ===
+// === VERCCEL WEBHOOK ===
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
   try {
-    const chunks = [];
-    for await (const chunk of req) {
-      chunks.push(chunk);
-    }
-    const body = Buffer.concat(chunks).toString();
+    const body = await new Promise((resolve, reject) => {
+      let data = '';
+      req.on('data', chunk => data += chunk);
+      req.on('end', () => resolve(data));
+      req.on('error', reject);
+    });
     const update = JSON.parse(body);
     await bot.handleUpdate(update);
     res.status(200).json({ ok: true });
