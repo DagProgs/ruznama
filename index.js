@@ -83,12 +83,10 @@ function getPrayerTimesForToday(timesData) {
   const monthEn = now.toLocaleString('en-GB', { month: 'long' });
   const monthRu = now.toLocaleString('ru-RU', { month: 'long' });
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за ${monthEn}`;
   const dayData = monthData[day];
   if (!dayData) return `❌ Нет данных на ${day} ${monthRuCap}`;
-
   return `
 📅 ${day} ${monthRuCap}
 Фаджр: ${fmt(dayData.Fajr)}
@@ -108,7 +106,6 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
   const dayW = 4;
   const timeW = 5;
-
   let header = `Времена намазов на ${monthRuCap}\n`;
   let colHeader = `<pre>` +
     'День'.padEnd(dayW, ' ') + '│' +
@@ -119,7 +116,6 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
     'Магр.'.padEnd(timeW, ' ') + '│' +
     'Иша'.padEnd(timeW, ' ') + '\n' +
     ''.padEnd(dayW + 1 + timeW * 6 + 6, '─') + '\n';
-
   let body = '';
   for (let d = 1; d <= 31; d++) {
     const dayStr = String(d).padStart(2, '0');
@@ -137,7 +133,6 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
     }
     body += row + '\n';
   }
-
   return header + colHeader + body + '</pre>';
 }
 
@@ -184,7 +179,6 @@ const mainMenu = {
 
 // === РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ===
 let users = new Set();
-
 function loadUsers() {
   try {
     if (fs.existsSync(usersFilePath)) {
@@ -218,12 +212,58 @@ function getRandomQuote() {
   return quotes[Math.floor(Math.random() * quotes.length)];
 }
 
+// === ПОИСК ГОРОДА/РАЙОНА ===
+function searchLocations(query) {
+  const allLocations = [...citiesAreasData.cities, ...citiesAreasData.areas];
+  const lowerQuery = query.toLowerCase().trim();
+
+  return allLocations.filter(loc => {
+    const name = (loc.name_cities || loc.name_areas || '').toLowerCase();
+    return name.includes(lowerQuery);
+  }).slice(0, 10); // Ограничение: максимум 10 результатов
+}
+
 // === СТАРТ ===
 bot.start((ctx) => {
   addUser(ctx.from.id);
   ctx.reply(
-    '📅⏰ Рузнама - Курахский район\n«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи и аль-Хаким)\n\nВыберите команду ниже:',
+    '📅⏰ Рузнама - Курахский район\n' +
+    '«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи и аль-Хаким)\n\n' +
+    'Выберите команду ниже или введите название города/района для поиска:',
     mainMenu
+  );
+});
+
+// === ОБРАБОТКА ТЕКСТА (ПОИСК) ===
+bot.on('text', async (ctx) => {
+  const text = ctx.message.text.trim();
+  const userId = ctx.from.id;
+  addUser(userId);
+
+  // Игнорируем команды
+  if (text.startsWith('/')) return;
+
+  // Поиск по названию
+  const results = searchLocations(text);
+
+  if (results.length === 0) {
+    return ctx.reply(
+      `❌ По запросу "${text}" ничего не найдено.\nПопробуйте ввести другое название.`,
+      mainMenu
+    );
+  }
+
+  // Формируем клавиатуру с результатами
+  const keyboard = results.map(loc => [{
+    text: `${loc.name_cities || loc.name_areas} (${loc.id})`,
+    callback_data: `loc_${loc.id}`
+  }]);
+
+  keyboard.push([{ text: '⬅️ В главное меню', callback_data: 'cmd_cities_areas' }]);
+
+  await ctx.reply(
+    `🔍 Найдено ${results.length} результатов по запросу "${text}":`,
+    { reply_markup: { inline_keyboard: keyboard } }
   );
 });
 
@@ -317,7 +357,7 @@ bot.on('callback_query', async (ctx) => {
   }
 
   // === Время на месяц (текущий) ===
-  if (data === `month_${data.split('_')[1]}` && data.startsWith('month_')) {
+  if (data.startsWith('month_')) {
     const id = data.split('_')[1];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
@@ -402,7 +442,10 @@ bot.on('callback_query', async (ctx) => {
   // === Хадис ===
   if (data === 'cmd_quote') {
     const q = getRandomQuote();
-    return await ctx.editMessageText(`❝ ${q.text} ❞\n— ${q.author}`, mainMenu);
+    return await ctx.editMessageText(
+      `❝ ${q.text} ❞\n— ${q.author}`,
+      mainMenu
+    );
   }
 });
 
