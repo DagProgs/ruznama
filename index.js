@@ -3,8 +3,9 @@
  * 
  * @author Developer
  * @license MIT
- * @version 1.2.0 (с рассылкой)
+ * @version 1.1.0
  */
+
 import { Telegraf } from 'telegraf';
 import fs from 'fs';
 import path from 'path';
@@ -16,6 +17,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
   throw new Error('❌ ОШИБКА: BOT_TOKEN не установлен в переменных окружения!');
 }
+
 const bot = new Telegraf(BOT_TOKEN);
 
 // ========================================================
@@ -24,7 +26,6 @@ const bot = new Telegraf(BOT_TOKEN);
 const citiesAreasPath = path.join(process.cwd(), 'db', 'cities-areas.json');
 const timesDir = path.join(process.cwd(), 'db', 'cities-areas');
 const usersFilePath = path.join(process.cwd(), 'users.json');
-const preferencesPath = path.join(process.cwd(), 'users-preferences.json');
 
 // ========================================================
 // 🌍 ЗАГРУЗКА ДАННЫХ: Города и районы
@@ -112,14 +113,60 @@ function getPrayerTimesForToday(timesData) {
   if (!monthData) return `❌ Нет данных за ${monthRuCap}`;
   const dayData = monthData[day];
   if (!dayData) return `❌ Нет данных на ${day} ${monthRuCap}`;
-  return {
-    Fajr: dayData.Fajr,
-    Sunrise: dayData.Sunrise,
-    Dhuhr: dayData.Dhuhr,
-    Asr: dayData.Asr,
-    Maghrib: dayData.Maghrib,
-    Isha: dayData.Isha
-  };
+
+  return `
+📅 <b>${day} ${monthRuCap}</b>
+🕌 <b>Фаджр</b>:    <code>${fmt(dayData.Fajr)}</code>
+🌅 <b>Восход</b>:   <code>${fmt(dayData.Sunrise)}</code>
+☀️ <b>Зухр</b>:     <code>${fmt(dayData.Dhuhr)}</code>
+🌇 <b>Аср</b>:      <code>${fmt(dayData.Asr)}</code>
+🌆 <b>Магриб</b>:   <code>${fmt(dayData.Maghrib)}</code>
+🌙 <b>Иша</b>:      <code>${fmt(dayData.Isha)}</code>
+`.trim();
+}
+
+// ========================================================
+// 📆 ТАБЛИЦА НА МЕСЯЦ
+// ========================================================
+function getPrayerTimesTableForMonth(timesData, monthEn) {
+  const monthData = timesData[monthEn];
+  if (!monthData) return `❌ Нет данных за ${monthEn}`;
+
+  const monthRu = getRussianMonthName(monthEn);
+  const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
+  const dayW = 3, timeW = 5;
+
+  let table = `<pre>`;
+  table += `Д`.padEnd(dayW + 1, ' ') +
+           `Фаджр`.padEnd(timeW + 1, ' ') +
+           `Шурук`.padEnd(timeW + 1, ' ') +
+           `Зухр`.padEnd(timeW + 1, ' ') +
+           `Аср`.padEnd(timeW + 1, ' ') +
+           `Магр`.padEnd(timeW + 1, ' ') +
+           `Иша`.padEnd(timeW + 1, ' ') + '\n';
+  table += '─'.repeat(dayW + timeW * 6 + 6) + '\n';
+
+  for (let d = 1; d <= 31; d++) {
+    const dayStr = String(d).padStart(2, '0');
+    const dayData = monthData[dayStr];
+    let row = d.toString().padEnd(dayW + 1, ' ');
+
+    if (dayData) {
+      row += fmt(dayData.Fajr).padEnd(timeW + 1, ' ') +
+             fmt(dayData.Sunrise).padEnd(timeW + 1, ' ') +
+             fmt(dayData.Dhuhr).padEnd(timeW + 1, ' ') +
+             fmt(dayData.Asr).padEnd(timeW + 1, ' ') +
+             fmt(dayData.Maghrib).padEnd(timeW + 1, ' ') +
+             fmt(dayData.Isha).padEnd(timeW + 1, ' ');
+    } else {
+      row += ' '.repeat(timeW * 6 + 5);
+    }
+
+    table += row + '\n';
+  }
+  table += '</pre>';
+
+  return `🕌 <b>Времена намазов — ${monthRuCap}</b>\n${table}`;
 }
 
 // ========================================================
@@ -136,6 +183,7 @@ function getMonthsList(locationId) {
       acc[acc.length - 1].push(btn);
       return acc;
     }, []);
+
   keyboard.push([{ text: '⬅️ Назад', callback_data: `back_to_loc_${locationId}` }]);
   return { reply_markup: { inline_keyboard: keyboard } };
 }
@@ -151,8 +199,6 @@ function getLocationMenu(locationId) {
         [{ text: '📅 Текущий месяц', callback_data: `month_${locationId}` }],
         [{ text: '🗓️ Выбрать месяц', callback_data: `year_${locationId}` }],
         [],
-        [{ text: '🔔 Подписаться', callback_data: `subscribe_${locationId}` }],
-        [{ text: '🚫 Отписаться', callback_data: `unsubscribe_${locationId}` }],
         [{ text: '⬅️ Назад к списку', callback_data: 'cmd_cities_areas' }]
       ]
     }
@@ -184,7 +230,6 @@ const mainMenu = {
 // 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ
 // ========================================================
 let users = new Set();
-let userPreferences = new Map(); // userId → { locationId, subscribed }
 
 function loadUsers() {
   try {
@@ -216,55 +261,10 @@ function addUser(userId) {
 }
 
 // ========================================================
-// 🎯 РАБОТА С ПРЕФЕРАНСАМИ (место + подписка)
-// ========================================================
-function loadPreferences() {
-  try {
-    if (fs.existsSync(preferencesPath)) {
-      const loaded = JSON.parse(fs.readFileSync(preferencesPath, 'utf8'));
-      userPreferences = new Map(loaded);
-      console.log(`✅ Настройки пользователей загружены: ${userPreferences.size}`);
-    }
-  } catch (e) {
-    console.error('❌ Ошибка загрузки preferences.json:', e.message);
-  }
-}
-
-function savePreferences() {
-  try {
-    const serialized = Array.from(userPreferences.entries()).map(([k, v]) => [k, v]);
-    fs.writeFileSync(preferencesPath, JSON.stringify(serialized), 'utf8');
-  } catch (e) {
-    console.error('❌ Ошибка сохранения preferences.json:', e.message);
-  }
-}
-
-function setPreference(userId, locationId) {
-  const id = userId.toString();
-  userPreferences.set(id, { locationId, subscribed: true });
-  savePreferences();
-}
-
-function unsubscribeUser(userId) {
-  const id = userId.toString();
-  if (userPreferences.has(id)) {
-    userPreferences.get(id).subscribed = false;
-    savePreferences();
-  }
-}
-
-function subscribeUser(userId) {
-  const id = userId.toString();
-  if (userPreferences.has(id)) {
-    userPreferences.get(id).subscribed = true;
-    savePreferences();
-  }
-}
-
-// ========================================================
 // 📜 ХАДИС ДНЯ
 // ========================================================
 const quotes = require('./quotes.json');
+
 function getRandomQuote() {
   return quotes[Math.floor(Math.random() * quotes.length)];
 }
@@ -288,39 +288,16 @@ function capitalize(str) {
 }
 
 // ========================================================
-// 🚀 КОМАНДА /start
+// 🚀 КОМАНДА /start (с красивым дизайном)
 // ========================================================
 bot.start((ctx) => {
   addUser(ctx.from.id);
   ctx.replyWithHTML(
-    `🕌 <b>Добро пожаловать в «Рузнама»</b>
-` +
-    `«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи)
-` +
+    `🕌 <b>Добро пожаловать в «Рузнама»</b>\n\n` +
+    `«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи)\n\n` +
     `📍 Выберите интересующий вас раздел или введите название населённого пункта.`,
     mainMenu
   );
-});
-
-// ========================================================
-// 🔔 /subscribe
-// ========================================================
-bot.command('subscribe', (ctx) => {
-  const userId = ctx.from.id.toString();
-  const pref = userPreferences.get(userId);
-  if (!pref || !pref.locationId) {
-    return ctx.replyWithHTML('❌ Сначала выберите место через меню.', mainMenu);
-  }
-  subscribeUser(userId);
-  ctx.replyWithHTML('✅ Вы подписались на уведомления за 10 минут до намаза!');
-});
-
-// ========================================================
-// 🚫 /unsubscribe
-// ========================================================
-bot.command('unsubscribe', (ctx) => {
-  unsubscribeUser(ctx.from.id);
-  ctx.replyWithHTML('🔕 Вы отписались от уведомлений.');
 });
 
 // ========================================================
@@ -328,21 +305,14 @@ bot.command('unsubscribe', (ctx) => {
 // ========================================================
 bot.command('help', (ctx) => {
   ctx.replyWithHTML(
-    `📘 <b>Справка по боту</b>
-` +
-    `• /start — Главное меню
-` +
-    `• /help — Помощь
-` +
-    `• /stats — Статистика
-` +
-    `• /about — О проекте
-` +
-    `• /newquote — Новый хадис
-` +
-    `• /subscribe — Подписаться на уведомления
-` +
-    `• /unsubscribe — Отписаться`
+    `📘 <b>Справка по боту</b>\n\n` +
+    `• /start — Главное меню\n` +
+    `• /help — Помощь\n` +
+    `• /stats — Статистика\n` +
+    `• /about — О проекте\n` +
+    `• /newquote — Новый хадис\n` +
+    `• /day — Времена намазов на сегодня\n` +
+    `• /month — Таблица на месяц`
   );
 });
 
@@ -351,14 +321,10 @@ bot.command('help', (ctx) => {
 // ========================================================
 bot.command('stats', (ctx) => {
   ctx.replyWithHTML(
-    `📊 <b>Статистика бота</b>
-` +
-    `👥 Пользователей: <b>${users.size}</b>
-` +
-    `🏙️ Городов: <b>${citiesAreasData.cities.length}</b>
-` +
-    `🏘️ Районов: <b>${citiesAreasData.areas.length}</b>
-` +
+    `📊 <b>Статистика бота</b>\n\n` +
+    `👥 Пользователей: <b>${users.size}</b>\n` +
+    `🏙️ Городов: <b>${citiesAreasData.cities.length}</b>\n` +
+    `🏘️ Районов: <b>${citiesAreasData.areas.length}</b>\n` +
     `🕌 Всего мест: <b>${citiesAreasData.cities.length + citiesAreasData.areas.length}</b>`
   );
 });
@@ -368,12 +334,9 @@ bot.command('stats', (ctx) => {
 // ========================================================
 bot.command('about', (ctx) => {
   ctx.replyWithHTML(
-    `ℹ️ <b>О боте «Рузнама»</b>
-` +
-    `🕌 Предоставляет точные времена намазов для городов и районов Курахского района.
-` +
-    `📩 Создан с заботой о верующих.
-` +
+    `ℹ️ <b>О боте «Рузнама»</b>\n\n` +
+    `🕌 Предоставляет точные времена намазов для городов и районов Курахского района.\n\n` +
+    `📩 Создан с заботой о верующих.\n\n` +
     `© 2025 | Разработан с искренним намерением`
   );
 });
@@ -384,12 +347,37 @@ bot.command('about', (ctx) => {
 bot.command('newquote', (ctx) => {
   const q = getRandomQuote();
   ctx.replyWithHTML(
-    `📘 <b>Хадис дня</b>
-` +
-    `❝ <i>${q.text}</i> ❞
-` +
+    `📘 <b>Хадис дня</b>\n\n` +
+    `❝ <i>${q.text}</i> ❞\n\n` +
     `— <b>${q.author}</b>`
   );
+});
+
+// ========================================================
+// 🕐 /day — заглушка
+// ========================================================
+bot.command('day', (ctx) => {
+  ctx.replyWithHTML(
+    '⏳ Чтобы увидеть времена намазов на сегодня — выберите место через меню или введите название.',
+    mainMenu
+  );
+});
+
+// ========================================================
+// 📅 /month — заглушка
+// ========================================================
+bot.command('month', (ctx) => {
+  ctx.replyWithHTML(
+    '📅 Показывает таблицу на текущий месяц. Сначала выберите место.',
+    mainMenu
+  );
+});
+
+// ========================================================
+// 🗓️ /year — заглушка
+// ========================================================
+bot.command('year', (ctx) => {
+  ctx.replyWithHTML('🗓️ Выберите месяц. Сначала укажите место.', mainMenu);
 });
 
 // ========================================================
@@ -398,20 +386,23 @@ bot.command('newquote', (ctx) => {
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return;
+
   addUser(ctx.from.id);
   const results = searchLocations(text);
+
   if (results.length === 0) {
     return ctx.replyWithHTML(
-      `🔍 <b>По запросу «${text}» ничего не найдено.</b>
-` +
+      `🔍 <b>По запросу «${text}» ничего не найдено.</b>\n\n` +
       `Проверьте написание или попробуйте другой вариант.`,
       mainMenu
     );
   }
+
   const keyboard = results.map(loc => [{
     text: `${loc.name_cities ? '🏙️' : '🏘️'} ${loc.name_cities || loc.name_areas}`,
     callback_data: `loc_${loc.id}`
   }]);
+
   await ctx.replyWithHTML(
     `🔍 <b>Найдено ${results.length}:</b>`,
     { reply_markup: { inline_keyboard: keyboard } }
@@ -424,6 +415,7 @@ bot.on('text', async (ctx) => {
 bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
+
   addUser(userId);
   try {
     await ctx.answerCbQuery();
@@ -482,6 +474,7 @@ bot.on('callback_query', async (ctx) => {
     const id = data.split('_')[1];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(id);
     if (!timesData) {
       const name = location.name_cities || location.name_areas;
@@ -490,11 +483,10 @@ bot.on('callback_query', async (ctx) => {
         { parse_mode: 'HTML', ...mainMenu }
       );
     }
-    setPreference(userId, id);
+
     const name = location.name_cities || location.name_areas;
     return await ctx.editMessageText(
-      `📍 <b>${name}</b>
-Выберите период:`,
+      `📍 <b>${name}</b>\nВыберите период:`,
       {
         parse_mode: 'HTML',
         ...getLocationMenu(id)
@@ -502,56 +494,46 @@ bot.on('callback_query', async (ctx) => {
     );
   }
 
-  // 🔔 Подписаться
-  if (data.startsWith('subscribe_')) {
-    const id = data.split('_')[1];
-    setPreference(userId, id);
-    return ctx.editMessageText(`✅ Вы подписались на уведомления.`, getLocationMenu(id));
-  }
-
-  // 🚫 Отписаться
-  if (data.startsWith('unsubscribe_')) {
-    unsubscribeUser(userId);
-    const id = data.split('_')[1];
-    return ctx.editMessageText(`🔕 Вы отписались.`, getLocationMenu(id));
-  }
-
   // 🕐 Сегодня
   if (data.startsWith('day_')) {
     const id = data.split('_')[1];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(id);
-    if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
+    if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
+      parse_mode: 'HTML',
+      ...mainMenu
+    });
+
     const msg = getPrayerTimesForToday(timesData);
     const name = location.name_cities || location.name_areas;
-    const text = `
-📍 <b>${name}</b>
-📅 <b>${new Date().getDate()} ${getRussianMonthName(new Date().toLocaleString('en-GB', { month: 'long' })).replace(/^\w/, c => c.toUpperCase())}</b>
-🕌 <b>Фаджр</b>:    <code>${fmt(msg.Fajr)}</code>
-🌅 <b>Восход</b>:   <code>${fmt(msg.Sunrise)}</code>
-☀️ <b>Зухр</b>:     <code>${fmt(msg.Dhuhr)}</code>
-🌇 <b>Аср</b>:      <code>${fmt(msg.Asr)}</code>
-🌆 <b>Магриб</b>:   <code>${fmt(msg.Maghrib)}</code>
-🌙 <b>Иша</b>:      <code>${fmt(msg.Isha)}</code>
-`.trim();
-    return await ctx.editMessageText(text, {
-      parse_mode: 'HTML',
-      ...getLocationMenu(id)
-    });
+    return await ctx.editMessageText(
+      `📍 <b>${name}</b>\n${msg}`,
+      {
+        parse_mode: 'HTML',
+        ...getLocationMenu(id)
+      }
+    );
   }
 
   // 📅 Месяц (текущий)
   if (data.startsWith('month_')) {
     const id = data.split('_')[1];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(id);
+    if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
+      parse_mode: 'HTML',
+      ...mainMenu
+    });
+
     const monthEn = getEnglishMonthName('now');
     const msg = getPrayerTimesTableForMonth(timesData, monthEn);
     const name = location.name_cities || location.name_areas;
     return await ctx.editMessageText(
-      `📍 <b>${name}</b>
-${msg}`,
+      `📍 <b>${name}</b>\n${msg}`,
       {
         parse_mode: 'HTML',
         ...getLocationMenu(id)
@@ -562,6 +544,15 @@ ${msg}`,
   // 🗓️ Год → выбор месяца
   if (data.startsWith('year_')) {
     const id = data.split('_')[1];
+    const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
+    const timesData = loadTimesById(id);
+    if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
+      parse_mode: 'HTML',
+      ...mainMenu
+    });
+
     return await ctx.editMessageText('🗓️ Выберите месяц:', getMonthsList(id));
   }
 
@@ -572,13 +563,20 @@ ${msg}`,
     const locationId = parts[parts.length - 1];
     const enMonth = getEnglishMonthName(ruMonth);
     if (!enMonth) return await ctx.editMessageText('❌ Месяц не распознан.', getLocationMenu(locationId));
+
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == locationId);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
     const timesData = loadTimesById(locationId);
+    if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
+      parse_mode: 'HTML',
+      ...mainMenu
+    });
+
     const msg = getPrayerTimesTableForMonth(timesData, enMonth);
     const name = location.name_cities || location.name_areas;
     return await ctx.editMessageText(
-      `📍 <b>${name}</b>
-${msg}`,
+      `📍 <b>${name}</b>\n${msg}`,
       {
         parse_mode: 'HTML',
         ...getLocationMenu(locationId)
@@ -590,10 +588,17 @@ ${msg}`,
   if (data.startsWith('back_to_loc_')) {
     const id = data.split('_')[3];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
+    if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
+    const timesData = loadTimesById(id);
+    if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
+      parse_mode: 'HTML',
+      ...mainMenu
+    });
+
     const name = location.name_cities || location.name_areas;
     return await ctx.editMessageText(
-      `📍 <b>${name}</b>
-Выберите период:`,
+      `📍 <b>${name}</b>\nВыберите период:`,
       {
         parse_mode: 'HTML',
         ...getLocationMenu(id)
@@ -605,10 +610,8 @@ ${msg}`,
   if (data === 'cmd_quote') {
     const q = getRandomQuote();
     return await ctx.editMessageText(
-      `📘 <b>Хадис дня</b>
-` +
-      `❝ <i>${q.text}</i> ❞
-` +
+      `📘 <b>Хадис дня</b>\n\n` +
+      `❝ <i>${q.text}</i> ❞\n\n` +
       `— <b>${q.author}</b>`,
       {
         parse_mode: 'HTML',
@@ -620,12 +623,9 @@ ${msg}`,
   // ℹ️ О боте
   if (data === 'cmd_about') {
     return await ctx.editMessageText(
-      `ℹ️ <b>О боте «Рузнама»</b>
-` +
-      `🕌 Предоставляет точные времена намазов для городов и районов Курахского района.
-` +
-      `📩 Создан с заботой о верующих.
-` +
+      `ℹ️ <b>О боте «Рузнама»</b>\n\n` +
+      `🕌 Предоставляет точные времена намазов для городов и районов Курахского района.\n\n` +
+      `📩 Создан с заботой о верующих.\n\n` +
       `© 2025 | Разработан с искренним намерением`,
       {
         parse_mode: 'HTML',
@@ -637,14 +637,10 @@ ${msg}`,
   // 📊 Статистика
   if (data === 'cmd_stats') {
     return await ctx.editMessageText(
-      `📊 <b>Статистика бота</b>
-` +
-      `👥 Пользователей: <b>${users.size}</b>
-` +
-      `🏙️ Городов: <b>${citiesAreasData.cities.length}</b>
-` +
-      `🏘️ Районов: <b>${citiesAreasData.areas.length}</b>
-` +
+      `📊 <b>Статистика бота</b>\n\n` +
+      `👥 Пользователей: <b>${users.size}</b>\n` +
+      `🏙️ Городов: <b>${citiesAreasData.cities.length}</b>\n` +
+      `🏘️ Районов: <b>${citiesAreasData.areas.length}</b>\n` +
       `🕌 Всего мест: <b>${citiesAreasData.cities.length + citiesAreasData.areas.length}</b>`,
       {
         parse_mode: 'HTML',
@@ -655,72 +651,13 @@ ${msg}`,
 });
 
 // ========================================================
-// 🕰️ РАССЫЛКА ПЕРЕД НАМАЗОМ
-// ========================================================
-function scheduleDailyNotifications() {
-  setInterval(async () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentKey = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
-
-    for (const [userId, pref] of userPreferences) {
-      if (!pref.subscribed) continue;
-
-      const timesData = loadTimesById(pref.locationId);
-      if (!timesData) continue;
-
-      const todayTimes = getPrayerTimesForToday(timesData);
-      if (!todayTimes) continue;
-
-      const prayers = {
-        'Фаджр': todayTimes.Fajr,
-        'Зухр': todayTimes.Dhuhr,
-        'Аср': todayTimes.Asr,
-        'Магриб': todayTimes.Maghrib,
-        'Иша': todayTimes.Isha
-      };
-
-      for (const [name, time] of Object.entries(prayers)) {
-        if (!time || !Array.isArray(time)) continue;
-        const prayerTime = `${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}`;
-        const [pH, pM] = prayerTime.split(':').map(Number);
-        const notifyTime = new Date(now);
-        notifyTime.setHours(pH, pM - 10, 0, 0); // за 10 минут
-        const notifyKey = `${String(notifyTime.getHours()).padStart(2, '0')}:${String(notifyTime.getMinutes()).padStart(2, '0')}`;
-
-        if (currentKey === notifyKey) {
-          const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == pref.locationId);
-          const locName = location?.name_cities || location?.name_areas || 'Ваше место';
-          try {
-            await bot.telegram.sendMessage(
-              userId,
-              `🔔 <b>Через 10 минут ${name}</b>
-📍 <i>${locName}</i>
-🕰️ Время намаза: <code>${prayerTime}</code>`,
-              { parse_mode: 'HTML' }
-            );
-          } catch (e) {
-            console.warn(`⚠️ Не удалось отправить сообщение пользователю ${userId}:`, e.message);
-            if (e.description?.includes('blocked')) {
-              userPreferences.delete(userId);
-              savePreferences();
-            }
-          }
-        }
-      }
-    }
-  }, 60000); // Каждую минуту
-}
-
-// ========================================================
-// 🚀 ЗАГРУЗКА И ЗАПУСК
+// 🚀 ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ
 // ========================================================
 loadUsers();
-loadPreferences();
-scheduleDailyNotifications();
 
+// ========================================================
 // ☁️ Vercel Webhook
+// ========================================================
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -741,7 +678,9 @@ export default async function handler(req, res) {
   }
 }
 
+// ========================================================
 // 💻 ЛОКАЛЬНЫЙ ЗАПУСК
+// ========================================================
 if (process.env.NODE_ENV !== 'production') {
   bot.launch().then(() => {
     console.log('✅ Бот запущен локально');
