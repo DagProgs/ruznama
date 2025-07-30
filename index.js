@@ -686,7 +686,7 @@ function scheduleDailyNotifications() {
         const prayerTime = `${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}`;
         const [pH, pM] = prayerTime.split(':').map(Number);
         const notifyTime = new Date(now);
-        notifyTime.setHours(pH, pM - 0, 5, 0); // за 10 минут
+        notifyTime.setHours(pH, pM - 10, 0, 0); // за 10 минут
         const notifyKey = `${String(notifyTime.getHours()).padStart(2, '0')}:${String(notifyTime.getMinutes()).padStart(2, '0')}`;
 
         if (currentKey === notifyKey) {
