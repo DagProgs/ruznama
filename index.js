@@ -5,7 +5,6 @@ const path = require('path');
 // === 🛑 ПРОВЕРКА ТОКЕНА ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) throw new Error('❌ ОШИБКА: BOT_TOKEN не установлен в переменных окружения!');
-
 const bot = new Telegraf(BOT_TOKEN);
 
 // === 📁 ПУТИ К ФАЙЛАМ ===
@@ -84,16 +83,13 @@ function getPrayerTimesForToday(timesData) {
   const monthEn = now.toLocaleString('en-GB', { month: 'long' });
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за ${monthEn}`;
-
   const dayData = monthData[day];
   if (!dayData) return `❌ Нет данных на ${day} ${monthRuCap}`;
 
   return `
 📅 <b>${day} ${monthRuCap}</b>
-
 🕋 <b>Фаджр</b>:    <code>${fmt(dayData.Fajr)}</code>
 🌅 <b>Восход</b>:   <code>${fmt(dayData.Sunrise)}</code>
 ☀️ <b>Зухр</b>:     <code>${fmt(dayData.Dhuhr)}</code>
@@ -107,15 +103,11 @@ function getPrayerTimesForToday(timesData) {
 function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за ${monthEn}`;
-
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
   const dayW = 3;
   const timeW = 5;
-
-  let header = `🕌 <b>Времена намазов — ${monthRuCap}</b>\n\n`;
-
+  let header = `🕌 <b>Времена намазов — ${monthRuCap}</b>\n`;
   let table = `<pre>`;
   table += `Д`.padEnd(dayW + 1, ' ') +
            `Ф`.padEnd(timeW + 1, ' ') +
@@ -124,15 +116,11 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
            `А`.padEnd(timeW + 1, ' ') +
            `М`.padEnd(timeW + 1, ' ') +
            `И`.padEnd(timeW + 1, ' ') + '\n';
-
   table += '─'.repeat(dayW + timeW * 6 + 6) + '\n';
-
   for (let d = 1; d <= 31; d++) {
     const dayStr = String(d).padStart(2, '0');
     const dayData = monthData[dayStr];
-
     let row = d.toString().padEnd(dayW + 1, ' ');
-
     if (dayData) {
       row += fmt(dayData.Fajr).padEnd(timeW + 1, ' ') +
              fmt(dayData.Sunrise).padEnd(timeW + 1, ' ') +
@@ -143,10 +131,8 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
     } else {
       row += ' '.repeat(timeW * 6 + 5);
     }
-
     table += row + '\n';
   }
-
   table += '</pre>';
   return header + table;
 }
@@ -163,9 +149,7 @@ function getMonthsList(locationId) {
       acc[acc.length - 1].push(btn);
       return acc;
     }, []);
-
   keyboard.push([{ text: '⬅️ Назад', callback_data: `back_to_loc_${locationId}` }]);
-
   return { reply_markup: { inline_keyboard: keyboard } };
 }
 
@@ -248,8 +232,8 @@ function searchLocations(query) {
 bot.start((ctx) => {
   addUser(ctx.from.id);
   ctx.replyWithHTML(
-    `🕌 <b>Рузнама — Курахский район</b>\n\n` +
-    `«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи)\n\n` +
+    `🕌 <b>Рузнама — Курахский район</b>\n` +
+    `«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи)\n` +
     `🔍 Выберите раздел или введите название города/района:`,
     mainMenu
   );
@@ -259,11 +243,8 @@ bot.start((ctx) => {
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   const userId = ctx.from.id;
-
   if (text.startsWith('/')) return;
-
   addUser(userId);
-
   const results = searchLocations(text);
   if (results.length === 0) {
     return ctx.replyWithHTML(
@@ -272,14 +253,12 @@ bot.on('text', async (ctx) => {
       mainMenu
     );
   }
-
+  // УДАЛЕНА кнопка "🏠 Главное меню"
   const keyboard = results.map(loc => [{
     text: `📍 ${loc.name_cities || loc.name_areas}`,
     callback_data: `loc_${loc.id}`
   }]);
-
-  keyboard.push([{ text: '🏠 Главное меню', callback_data: 'cmd_cities_areas' }]);
-
+  // Кнопка "назад" в главное меню УДАЛЕНА
   await ctx.replyWithHTML(
     `🔍 <b>Найдено ${results.length} результатов:</b>`,
     { reply_markup: { inline_keyboard: keyboard } }
@@ -290,21 +269,12 @@ bot.on('text', async (ctx) => {
 bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
-
   addUser(userId);
 
   try {
     await ctx.answerCbQuery();
   } catch (e) {
     console.warn('⚠️ Не удалось ответить на callback:', e.message);
-  }
-
-  // === 🏠 Главное меню ===
-  if (data === 'cmd_cities_areas') {
-    return await ctx.editMessageText('🏠 Выберите раздел:', {
-      parse_mode: 'HTML',
-      ...mainMenu
-    });
   }
 
   // === 🏙️ Города ===
@@ -315,13 +285,11 @@ bot.on('callback_query', async (ctx) => {
         ...mainMenu
       });
     }
-
     const keyboard = citiesAreasData.cities.map(c => [{
       text: `🏙️ ${c.name_cities}`,
       callback_data: `loc_${c.id}`
     }]);
     keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
-
     return await ctx.editMessageText('<b>🌆 Города</b>', {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: keyboard }
@@ -336,13 +304,11 @@ bot.on('callback_query', async (ctx) => {
         ...mainMenu
       });
     }
-
     const keyboard = citiesAreasData.areas.map(a => [{
       text: `🏘️ ${a.name_areas}`,
       callback_data: `loc_${a.id}`
     }]);
     keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
-
     return await ctx.editMessageText('<b>🏘️ Районы</b>', {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: keyboard }
@@ -354,7 +320,6 @@ bot.on('callback_query', async (ctx) => {
     const id = data.split('_')[1];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
-
     const timesData = loadTimesById(id);
     if (!timesData) {
       return await ctx.editMessageText(
@@ -362,7 +327,6 @@ bot.on('callback_query', async (ctx) => {
         { parse_mode: 'HTML', ...mainMenu }
       );
     }
-
     const name = location.name_cities || location.name_areas;
     return await ctx.editMessageText(
       `📍 <b>Вы выбрали: ${name}</b>\nВыберите период:`,
@@ -378,16 +342,13 @@ bot.on('callback_query', async (ctx) => {
     const id = data.split('_')[1];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
-
     const timesData = loadTimesById(id);
     if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
       parse_mode: 'HTML',
       ...mainMenu
     });
-
     const msg = getPrayerTimesForToday(timesData);
     const name = location.name_cities || location.name_areas;
-
     return await ctx.editMessageText(
       `📍 <b>${name}</b>\n${msg}`,
       {
@@ -402,17 +363,14 @@ bot.on('callback_query', async (ctx) => {
     const id = data.split('_')[1];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
-
     const timesData = loadTimesById(id);
     if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
       parse_mode: 'HTML',
       ...mainMenu
     });
-
     const monthEn = getEnglishMonthName('now');
     const msg = getPrayerTimesTableForMonth(timesData, monthEn);
     const name = location.name_cities || location.name_areas;
-
     return await ctx.editMessageText(
       `📍 <b>${name}</b>\n${msg}`,
       {
@@ -427,37 +385,30 @@ bot.on('callback_query', async (ctx) => {
     const id = data.split('_')[1];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
-
     const timesData = loadTimesById(id);
     if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
       parse_mode: 'HTML',
       ...mainMenu
     });
-
     return await ctx.editMessageText('🗓️ Выберите месяц:', getMonthsList(id));
   }
 
   // === 📅 Выбор месяца ===
   if (data.startsWith('select_month_')) {
     const parts = data.split('_');
-    const ruMonth = parts.slice(2, -1).join('_'); // поддержка "ноябрь"
+    const ruMonth = parts.slice(2, -1).join('_');
     const locationId = parts[parts.length - 1];
-
     const enMonth = getEnglishMonthName(ruMonth);
     if (!enMonth) return await ctx.editMessageText('❌ Месяц не распознан.', getLocationMenu(locationId));
-
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == locationId);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
-
     const timesData = loadTimesById(locationId);
     if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
       parse_mode: 'HTML',
       ...mainMenu
     });
-
     const msg = getPrayerTimesTableForMonth(timesData, enMonth);
     const name = location.name_cities || location.name_areas;
-
     return await ctx.editMessageText(
       `📍 <b>${name}</b>\n${msg}`,
       {
@@ -472,13 +423,11 @@ bot.on('callback_query', async (ctx) => {
     const id = data.split('_')[3];
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
     if (!location) return await ctx.editMessageText('❌ Место не найдено.');
-
     const timesData = loadTimesById(id);
     if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', {
       parse_mode: 'HTML',
       ...mainMenu
     });
-
     const name = location.name_cities || location.name_areas;
     return await ctx.editMessageText(
       `📍 <b>${name}</b>\nВыберите период:`,
@@ -493,14 +442,22 @@ bot.on('callback_query', async (ctx) => {
   if (data === 'cmd_quote') {
     const q = getRandomQuote();
     return await ctx.editMessageText(
-      `📘 <b>Хадис дня</b>\n\n` +
-      `❝ ${q.text} ❞\n\n` +
+      `📘 <b>Хадис дня</b>\n` +
+      `❝ ${q.text} ❞\n` +
       `— <i>${q.author}</i>`,
       {
         parse_mode: 'HTML',
         ...mainMenu
       }
     );
+  }
+
+  // === 🏠 Главное меню — оставляем для навигации из городов/районов
+  if (data === 'cmd_cities_areas') {
+    return await ctx.editMessageText('🏠 Выберите раздел:', {
+      parse_mode: 'HTML',
+      ...mainMenu
+    });
   }
 });
 
