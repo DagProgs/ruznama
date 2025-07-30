@@ -3,12 +3,11 @@
  *
  * @author Developer
  * @license MIT
- * @version 1.3.1 (адаптивная таблица + пагинация)
+ * @version 1.3.0 (стильный редизайн)
  */
 import { Telegraf } from 'telegraf';
 import fs from 'fs';
 import path from 'path';
-
 // ========================================================
 // 🛑 ПРОВЕРКА ТОКЕНА
 // ========================================================
@@ -17,14 +16,12 @@ if (!BOT_TOKEN) {
   throw new Error('❌ ОШИБКА: BOT_TOKEN не установлен в переменных окружения!');
 }
 const bot = new Telegraf(BOT_TOKEN);
-
 // ========================================================
 // 📁 ПУТИ К ФАЙЛАМ
 // ========================================================
 const citiesAreasPath = path.join(process.cwd(), 'db', 'cities-areas.json');
 const timesDir = path.join(process.cwd(), 'db', 'cities-areas');
 const usersFilePath = path.join(process.cwd(), 'users.json');
-
 // ========================================================
 // 🌍 ЗАГРУЗКА ДАННЫХ: Города и районы
 // ========================================================
@@ -39,7 +36,6 @@ try {
 } catch (e) {
   console.error('❌ Ошибка чтения cities-areas.json:', e.message);
 }
-
 // ========================================================
 // 📆 МАППИНГ МЕСЯЦЕВ: Рус → Англ
 // ========================================================
@@ -57,7 +53,6 @@ const russianToEnglishMonth = {
   ноябрь: 'November',
   декабрь: 'December',
 };
-
 function getEnglishMonthName(ruMonth) {
   if (ruMonth === 'now') {
     return new Date().toLocaleString('en-GB', { month: 'long' });
@@ -65,12 +60,10 @@ function getEnglishMonthName(ruMonth) {
   const lower = ruMonth.toLowerCase().trim();
   return russianToEnglishMonth[lower] || null;
 }
-
 function getRussianMonthName(enMonth) {
   const entry = Object.entries(russianToEnglishMonth).find(([, eng]) => eng === enMonth);
   return entry ? entry[0] : enMonth;
 }
-
 // ========================================================
 // 🕰️ ЗАГРУЗКА ВРЕМЁН ПО ID
 // ========================================================
@@ -88,7 +81,6 @@ function loadTimesById(id) {
     return null;
   }
 }
-
 // ========================================================
 // 🕐 ФОРМАТИРОВАНИЕ ВРЕМЕНИ
 // ========================================================
@@ -97,9 +89,8 @@ function fmt(time) {
     ? `<code>${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}</code>`
     : '<code>—</code>';
 }
-
 // ========================================================
-// 📅 ВРЕМЕНА НА СЕГОДНЯ
+// 📅 ВРЕМЕНА НА СЕГОДНЯ (с красивым оформлением)
 // ========================================================
 function getPrayerTimesForToday(timesData) {
   const now = new Date();
@@ -111,7 +102,6 @@ function getPrayerTimesForToday(timesData) {
   if (!monthData) return `❌ Нет данных за <b>${monthRuCap}</b>`;
   const dayData = monthData[day];
   if (!dayData) return `❌ Нет данных на <b>${day} ${monthRuCap}</b>`;
-
   return `
 ✨ <b>Времена намазов на сегодня</b>
 📅 <i>${day} ${monthRuCap}</i>
@@ -124,55 +114,54 @@ function getPrayerTimesForToday(timesData) {
 🕋 Пусть ваш намаз будет принят.
 `.trim();
 }
-
 // ========================================================
-// 🗓️ ПАГИНИРОВАННАЯ ТАБЛИЦА ПО НЕДЕЛЯМ (адаптивная)
+// 📆 ТАБЛИЦА НА МЕСЯЦ (компактная, узкая, под мобильные)
 // ========================================================
-function getWeeklyPage(timesData, monthEn, weekOffset = 0) {
+function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthData = timesData[monthEn];
-  if (!monthData) return { text: `❌ Нет данных за <b>${monthEn}</b>`, keyboard: [] };
-
+  if (!monthData) return `❌ Нет данных за <b>${monthEn}</b>`;
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
 
-  const startDay = weekOffset * 7 + 1;
-  const endDay = Math.min(startDay + 6, 31);
+  const col = { day: 2, time: 5 }; // Узкие колонки
+  let table = `<pre style="font-family: monospace; white-space: pre;">`;
+  // Короткие заголовки: Ф, Ш, З, А, М, И
+  table += `Д`.padEnd(col.day + 1) +
+           `Ф`.padEnd(col.time + 1) +
+           `Ш`.padEnd(col.time + 1) +
+           `З`.padEnd(col.time + 1) +
+           `А`.padEnd(col.time + 1) +
+           `М`.padEnd(col.time + 1) +
+           `И`.padEnd(col.time + 1) + '\n';
 
-  let message = `🗓️ <b>${monthRuCap}</b> | Дни: ${startDay}–${endDay}\n\n`;
-  let hasData = false;
+  // Разделитель
+  table += '─'.repeat(col.day + col.time * 6 + 6) + '\n';
 
-  for (let d = startDay; d <= endDay; d++) {
+  for (let d = 1; d <= 31; d++) {
     const dayStr = String(d).padStart(2, '0');
     const dayData = monthData[dayStr];
+    let row = d.toString().padEnd(col.day + 1); // Без 0 в дате
+
     if (dayData) {
-      hasData = true;
-      message += `<b>${d}:</b> ${fmt(dayData.Fajr)} | ${fmt(dayData.Dhuhr)} | ${fmt(dayData.Maghrib)}\n`;
+      const cleanFmt = (t) => fmt(t).replace(/<\/?code>/g, '').trim();
+      row += cleanFmt(dayData.Fajr).padEnd(col.time + 1) +
+             cleanFmt(dayData.Sunrise).padEnd(col.time + 1) +
+             cleanFmt(dayData.Dhuhr).padEnd(col.time + 1) +
+             cleanFmt(dayData.Asr).padEnd(col.time + 1) +
+             cleanFmt(dayData.Maghrib).padEnd(col.time + 1) +
+             cleanFmt(dayData.Isha).padEnd(col.time + 1);
     } else {
-      message += `<b>${d}:</b> —\n`;
+      row += ' '.repeat(col.time * 6 + 6);
     }
+    table += row + '\n';
   }
+  table += '</pre>';
 
-  if (!hasData) message += `❌ Нет данных за указанный период.`;
-
-  // Клавиатура пагинации
-  const keyboard = [];
-  const prevWeek = weekOffset > 0 ? weekOffset - 1 : null;
-  const nextWeek = endDay < 31 ? weekOffset + 1 : null;
-
-  const row = [];
-  if (prevWeek !== null) {
-    row.push({ text: '⬅️ Назад', callback_data: `week_prev_${monthEn}_${weekOffset}` });
-  }
-  if (nextWeek !== null) {
-    row.push({ text: 'Вперёд ➡️', callback_data: `week_next_${monthEn}_${weekOffset}` });
-  }
-  if (row.length) keyboard.push(row);
-
-  keyboard.push([{ text: '⬅️ Назад', callback_data: `back_to_loc_menu` }]);
-
-  return { text: message.trim(), reply_markup: { inline_keyboard: keyboard } };
+  return `
+🗓️ <b>Намазы — ${monthRuCap}</b>
+${table}
+`.trim();
 }
-
 // ========================================================
 // 🗓️ КЛАВИАТУРА: Выбор месяца (3 в строку)
 // ========================================================
@@ -190,9 +179,8 @@ function getMonthsList(locationId) {
   keyboard.push([{ text: '⬅️ Назад', callback_data: `back_to_loc_${locationId}` }]);
   return { reply_markup: { inline_keyboard: keyboard } };
 }
-
 // ========================================================
-// 📍 МЕНЮ МЕСТА
+// 📍 МЕНЮ МЕСТА (с разделителями и иконками)
 // ========================================================
 function getLocationMenu(locationId) {
   return {
@@ -207,9 +195,8 @@ function getLocationMenu(locationId) {
     },
   };
 }
-
 // ========================================================
-// 🏠 ГЛАВНОЕ МЕНЮ
+// 🏠 ГЛАВНОЕ МЕНЮ (с выравниванием и пробелами)
 // ========================================================
 const mainMenu = {
   reply_markup: {
@@ -226,7 +213,6 @@ const mainMenu = {
     ],
   },
 };
-
 // ========================================================
 // 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ
 // ========================================================
@@ -242,7 +228,6 @@ function loadUsers() {
     console.error('❌ Ошибка загрузки users.json:', e.message);
   }
 }
-
 function saveUsers() {
   try {
     fs.writeFileSync(usersFilePath, JSON.stringify([...users]), 'utf8');
@@ -250,7 +235,6 @@ function saveUsers() {
     console.error('❌ Ошибка сохранения users.json:', e.message);
   }
 }
-
 function addUser(userId) {
   const id = userId.toString();
   if (!users.has(id)) {
@@ -259,7 +243,6 @@ function addUser(userId) {
     console.log(`🆕 Новый пользователь: ${id} | Всего: ${users.size}`);
   }
 }
-
 // ========================================================
 // 📜 ХАДИС ДНЯ
 // ========================================================
@@ -267,7 +250,6 @@ const quotes = require('./quotes.json');
 function getRandomQuote() {
   return quotes[Math.floor(Math.random() * quotes.length)];
 }
-
 // ========================================================
 // 🔍 ПОИСК ПО НАЗВАНИЮ
 // ========================================================
@@ -278,14 +260,12 @@ function searchLocations(query) {
     .filter((loc) => (loc.name_cities || loc.name_areas || '').toLowerCase().includes(lowerQuery))
     .slice(0, 10);
 }
-
 // ========================================================
 // 🛠️ Утилита: Заглавная буква
 // ========================================================
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
-
 // ========================================================
 // 🚀 КОМАНДА /start
 // ========================================================
@@ -302,7 +282,6 @@ bot.start((ctx) => {
     mainMenu
   ).catch(console.error);
 });
-
 // ========================================================
 // 🆘 /help
 // ========================================================
@@ -325,7 +304,6 @@ bot.command('help', (ctx) => {
       `• <b>/month</b> — Таблица на месяц`
   ).catch(console.error);
 });
-
 // ========================================================
 // 📊 /stats
 // ========================================================
@@ -342,7 +320,6 @@ bot.command('stats', (ctx) => {
       `🕌 <b>Всего мест:</b> <code>${citiesAreasData.cities.length + citiesAreasData.areas.length}</code>`
   ).catch(console.error);
 });
-
 // ========================================================
 // ℹ️ /about
 // ========================================================
@@ -357,7 +334,6 @@ bot.command('about', (ctx) => {
       `© 2025 | Разработан с искренним намерением`
   ).catch(console.error);
 });
-
 // ========================================================
 // 🆕 /newquote
 // ========================================================
@@ -371,7 +347,6 @@ bot.command('newquote', (ctx) => {
       `— <b>${q.author}</b>`
   ).catch(console.error);
 });
-
 // ========================================================
 // 🕐 /day — заглушка
 // ========================================================
@@ -381,7 +356,6 @@ bot.command('day', (ctx) => {
     mainMenu
   ).catch(console.error);
 });
-
 // ========================================================
 // 📅 /month — заглушка
 // ========================================================
@@ -391,7 +365,13 @@ bot.command('month', (ctx) => {
     mainMenu
   ).catch(console.error);
 });
-
+// ========================================================
+// 🗓️ /year — заглушка
+// ========================================================
+bot.command('year', (ctx) => {
+  return ctx.replyWithHTML('🗓️ Выберите месяц. Сначала укажите место.', mainMenu)
+    .catch(console.error);
+});
 // ========================================================
 // 🔤 ОБРАБОТКА ТЕКСТА (поиск)
 // ========================================================
@@ -419,7 +399,6 @@ bot.on('text', async (ctx) => {
     { reply_markup: { inline_keyboard: keyboard } }
   ).catch(console.error);
 });
-
 // ========================================================
 // 🔘 ОБРАБОТКА КНОПОК
 // ========================================================
@@ -428,13 +407,11 @@ bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
   addUser(userId);
-
   try {
     await ctx.answerCbQuery().catch(() => {});
   } catch (err) {
     console.warn('⚠️ Не удалось ответить на callback:', err.message);
   }
-
   try {
     // 🏠 Главное меню
     if (data === 'cmd_cities_areas') {
@@ -443,7 +420,6 @@ bot.on('callback_query', async (ctx) => {
         ...mainMenu,
       });
     }
-
     // 🏙️ Города
     if (data === 'cmd_cities') {
       if (!citiesAreasData.cities.length) {
@@ -461,7 +437,6 @@ bot.on('callback_query', async (ctx) => {
         reply_markup: { inline_keyboard: keyboard },
       });
     }
-
     // 🏘️ Районы
     if (data === 'cmd_areas') {
       if (!citiesAreasData.areas.length) {
@@ -479,7 +454,6 @@ bot.on('callback_query', async (ctx) => {
         reply_markup: { inline_keyboard: keyboard },
       });
     }
-
     // 📍 Выбор места
     if (data.startsWith('loc_')) {
       const id = data.split('_')[1];
@@ -504,7 +478,6 @@ bot.on('callback_query', async (ctx) => {
         }
       );
     }
-
     // 🕐 Сегодня
     if (data.startsWith('day_')) {
       const id = data.split('_')[1];
@@ -525,8 +498,7 @@ ${msg}`,
         }
       );
     }
-
-    // 📅 Месяц (текущий, первая неделя)
+    // 📅 Месяц (текущий)
     if (data.startsWith('month_')) {
       const id = data.split('_')[1];
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
@@ -536,17 +508,17 @@ ${msg}`,
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const monthEn = getEnglishMonthName('now');
-      const page = getWeeklyPage(timesData, monthEn, 0);
+      const msg = getPrayerTimesTableForMonth(timesData, monthEn);
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
-        `📍 <b>${name}</b>\n${page.text}`,
+        `📍 <b>${name}</b>
+${msg}`,
         {
           parse_mode: 'HTML',
-          ...page.reply_markup,
+          ...getLocationMenu(id),
         }
       );
     }
-
     // 🗓️ Год → выбор месяца
     if (data.startsWith('year_')) {
       const id = data.split('_')[1];
@@ -558,63 +530,49 @@ ${msg}`,
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       return await ctx.editMessageText('🗓️ Выберите месяц:', getMonthsList(id));
     }
-
-    // 📅 Выбор месяца → показ первой недели
+    // 📅 Выбор месяца
     if (data.startsWith('select_month_')) {
       const parts = data.split('_');
       const ruMonth = parts.slice(2, -1).join('_');
       const locationId = parts[parts.length - 1];
       const enMonth = getEnglishMonthName(ruMonth);
       if (!enMonth) return await ctx.editMessageText('❌ Месяц не распознан.', getLocationMenu(locationId));
-
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == locationId
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(locationId);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
-
-      const page = getWeeklyPage(timesData, enMonth, 0);
+      const msg = getPrayerTimesTableForMonth(timesData, enMonth);
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
-        `📍 <b>${name}</b>\n${page.text}`,
+        `📍 <b>${name}</b>
+${msg}`,
         {
           parse_mode: 'HTML',
-          ...page.reply_markup,
+          ...getLocationMenu(locationId),
         }
       );
     }
-
-    // 🟰⬅️ Назад по неделям
-    if (data.startsWith('week_prev_')) {
-      const [, , monthEn, weekOffset] = data.split('_');
-      const offset = parseInt(weekOffset) - 1;
-      const page = getWeeklyPage(ctx.session.timesData || {}, monthEn, offset);
-      return await ctx.editMessageText(page.text, {
-        parse_mode: 'HTML',
-        ...page.reply_markup,
-      });
-    }
-
-    // ➡️🟱 Вперёд по неделям
-    if (data.startsWith('week_next_')) {
-      const [, , monthEn, weekOffset] = data.split('_');
-      const offset = parseInt(weekOffset) + 1;
-      const page = getWeeklyPage(ctx.session.timesData || {}, monthEn, offset);
-      return await ctx.editMessageText(page.text, {
-        parse_mode: 'HTML',
-        ...page.reply_markup,
-      });
-    }
-
     // 🔙 Назад к месту
-    if (data === 'back_to_loc_menu') {
-      const currentText = ctx.message.text || '';
-      const match = currentText.match(/id_(\d+)/);
-      // В реальности нужно хранить ID в сессии или извлекать из контекста
-      return await ctx.editMessageText('📍 Выберите период:', mainMenu.reply_markup);
+    if (data.startsWith('back_to_loc_')) {
+      const id = data.split('_')[3];
+      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
+        (l) => l.id == id
+      );
+      if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+      const timesData = loadTimesById(id);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
+      const name = location.name_cities || location.name_areas;
+      return await ctx.editMessageText(
+        `📍 <b>${name}</b>
+Выберите период:`,
+        {
+          parse_mode: 'HTML',
+          ...getLocationMenu(id),
+        }
+      );
     }
-
     // 📜 Хадис дня
     if (data === 'cmd_quote') {
       const q = getRandomQuote();
@@ -626,11 +584,10 @@ ${msg}`,
           `— <b>${q.author}</b>`,
         {
           parse_mode: 'HTML',
-          ...mainMenu,
+          ...main
         }
       );
     }
-
     // ℹ️ О боте
     if (data === 'cmd_about') {
       return await ctx.editMessageText(
@@ -647,7 +604,6 @@ ${msg}`,
         }
       );
     }
-
     // 📊 Статистика
     if (data === 'cmd_stats') {
       return await ctx.editMessageText(
@@ -666,25 +622,6 @@ ${msg}`,
         }
       );
     }
-
-    // 🔙 Назад к меню месяца
-    if (data.startsWith('back_to_loc_')) {
-      const id = data.split('_')[3];
-      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
-        (l) => l.id == id
-      );
-      if (!location) return await ctx.editMessageText('❌ Место не найдено.');
-      const name = location.name_cities || location.name_areas;
-      return await ctx.editMessageText(
-        `📍 <b>${name}</b>
-Выберите период:`,
-        {
-          parse_mode: 'HTML',
-          ...getLocationMenu(id),
-        }
-      );
-    }
-
   } catch (err) {
     console.error('❌ Ошибка при обработке callback:', err.message);
     try {
@@ -694,12 +631,10 @@ ${msg}`,
     }
   }
 });
-
 // ========================================================
 // 🚀 ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ
 // ========================================================
 loadUsers();
-
 // ========================================================
 // ☁️ Vercel Webhook
 // ========================================================
@@ -722,7 +657,6 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }
-
 // ========================================================
 // 💻 ЛОКАЛЬНЫЙ ЗАПУСК
 // ========================================================
