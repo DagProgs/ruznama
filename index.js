@@ -87,7 +87,6 @@ function getPrayerTimesForToday(timesData) {
   if (!monthData) return `❌ Нет данных за ${monthEn}`;
   const dayData = monthData[day];
   if (!dayData) return `❌ Нет данных на ${day} ${monthRuCap}`;
-
   return `
 📅 <b>${day} ${monthRuCap}</b>
 🕋 <b>Фаджр</b>:    <code>${fmt(dayData.Fajr)}</code>
@@ -239,11 +238,76 @@ bot.start((ctx) => {
   );
 });
 
+// === 🆘 /help ===
+bot.command('help', (ctx) => {
+  ctx.replyWithHTML(
+    `📘 <b>Справка по командам</b>\n\n` +
+    `/start — Главное меню\n` +
+    `/help — Эта справка\n` +
+    `/stats — Статистика бота\n` +
+    `/about — О боте\n` +
+    `/newquote — Новый хадис\n` +
+    `/day — Времена намазов на сегодня\n` +
+    `/month — Таблица на текущий месяц\n` +
+    `/year — Выбор месяца за год`
+  );
+});
+
+// === 📊 /stats ===
+bot.command('stats', (ctx) => {
+  ctx.replyWithHTML(
+    `📈 <b>Статистика бота</b>\n\n` +
+    `👥 Пользователей: <b>${users.size}</b>\n` +
+    `🏙️ Городов: <b>${citiesAreasData.cities.length}</b>\n` +
+    `🏘️ Районов: <b>${citiesAreasData.areas.length}</b>\n` +
+    `🕌 Всего мест: <b>${citiesAreasData.cities.length + citiesAreasData.areas.length}</b>`
+  );
+});
+
+// === ℹ️ /about ===
+bot.command('about', (ctx) => {
+  ctx.replyWithHTML(
+    `ℹ️ <b>О боте</b>\n\n` +
+    `🕌 <b>Рузнама — Курахский район</b>\n` +
+    `Бот предоставляет времена намазов для городов и районов Курахского района.\n\n` +
+    `📩 Разработан для удобства верующих.\n` +
+    `© 2025`
+  );
+});
+
+// === 🆕 /newquote ===
+bot.command('newquote', (ctx) => {
+  const q = getRandomQuote();
+  ctx.replyWithHTML(
+    `📘 <b>Хадис дня</b>\n` +
+    `❝ ${q.text} ❞\n` +
+    `— <i>${q.author}</i>`
+  );
+});
+
+// === 🕐 /day ===
+bot.command('day', async (ctx) => {
+  ctx.replyWithHTML('⏳ Эта команда пока требует выбора места. Используйте меню или введите название.');
+});
+
+// === 📅 /month ===
+bot.command('month', async (ctx) => {
+  ctx.replyWithHTML('⏳ Эта команда показывает таблицу на текущий месяц. Выберите место через меню.');
+});
+
+// === 🗓️ /year ===
+bot.command('year', async (ctx) => {
+  ctx.replyWithHTML('🗓️ Эта команда открывает выбор месяца. Выберите место через меню.');
+});
+
 // === 🔤 ОБРАБОТКА ТЕКСТА ===
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   const userId = ctx.from.id;
+
+  // Пропускаем команды — они уже обрабатываются через bot.command()
   if (text.startsWith('/')) return;
+
   addUser(userId);
   const results = searchLocations(text);
   if (results.length === 0) {
@@ -253,12 +317,16 @@ bot.on('text', async (ctx) => {
       mainMenu
     );
   }
-  // УДАЛЕНА кнопка "🏠 Главное меню"
+
+  // Создаём кнопки для найденных мест
   const keyboard = results.map(loc => [{
     text: `📍 ${loc.name_cities || loc.name_areas}`,
     callback_data: `loc_${loc.id}`
   }]);
-  // Кнопка "назад" в главное меню УДАЛЕНА
+
+  // УДАЛЕНА кнопка "🏠 Главное меню"
+  // keyboard.push([{ text: '🏠 Главное меню', callback_data: 'cmd_cities_areas' }]);
+
   await ctx.replyWithHTML(
     `🔍 <b>Найдено ${results.length} результатов:</b>`,
     { reply_markup: { inline_keyboard: keyboard } }
@@ -275,6 +343,14 @@ bot.on('callback_query', async (ctx) => {
     await ctx.answerCbQuery();
   } catch (e) {
     console.warn('⚠️ Не удалось ответить на callback:', e.message);
+  }
+
+  // === 🏠 Главное меню ===
+  if (data === 'cmd_cities_areas') {
+    return await ctx.editMessageText('🏠 Выберите раздел:', {
+      parse_mode: 'HTML',
+      ...mainMenu
+    });
   }
 
   // === 🏙️ Города ===
@@ -450,14 +526,6 @@ bot.on('callback_query', async (ctx) => {
         ...mainMenu
       }
     );
-  }
-
-  // === 🏠 Главное меню — оставляем для навигации из городов/районов
-  if (data === 'cmd_cities_areas') {
-    return await ctx.editMessageText('🏠 Выберите раздел:', {
-      parse_mode: 'HTML',
-      ...mainMenu
-    });
   }
 });
 
