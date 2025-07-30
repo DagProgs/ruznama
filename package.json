@@ -1,7 +1,7 @@
 {
-  "name": "telegram-quotes-bot",
+  "name": "ruznama-bot",
   "version": "1.0.0",
-  "description": "Telegram bot for sending random quotes",
+  "description": "ruznama-bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -10,7 +10,7 @@
   "dependencies": {
     "telegraf": "^4.12.2"
   },
-  "keywords": ["telegram", "bot", "quotes"],
-  "author": "Your Name",
+  "keywords": ["ruznama", "bot"],
+  "author": "DagProgs",
   "license": "MIT"
 }
