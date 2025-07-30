@@ -172,12 +172,12 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
 
   let table = `<pre>`;
   table += `Д`.padEnd(dayW + 1, ' ') +
-           `Ф`.padEnd(timeW + 1, ' ') +
-           `В`.padEnd(timeW + 1, ' ') +
-           `З`.padEnd(timeW + 1, ' ') +
-           `А`.padEnd(timeW + 1, ' ') +
-           `М`.padEnd(timeW + 1, ' ') +
-           `И`.padEnd(timeW + 1, ' ') + '\n';
+           `Фаджр`.padEnd(timeW + 1, ' ') +
+           `шурук`.padEnd(timeW + 1, ' ') +
+           `Зухр`.padEnd(timeW + 1, ' ') +
+           `Аср`.padEnd(timeW + 1, ' ') +
+           `Магриб`.padEnd(timeW + 1, ' ') +
+           `Иша`.padEnd(timeW + 1, ' ') + '\n';
   table += '─'.repeat(dayW + timeW * 6 + 6) + '\n';
 
   for (let d = 1; d <= 31; d++) {
