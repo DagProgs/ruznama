@@ -238,6 +238,50 @@ bot.start((ctx) => {
   );
 });
 
+// === 🆘 /help ===
+bot.command('help', (ctx) => {
+  ctx.replyWithHTML(
+    `📘 <b>Справка</b>\n\n` +
+    `Доступные команды:\n\n` +
+    `/help — Эта справка\n` +
+    `/stats — Статистика бота\n` +
+    `/about — О боте\n` +
+    `/newquote — Новый хадис`
+  );
+});
+
+// === 📊 /stats ===
+bot.command('stats', (ctx) => {
+  ctx.replyWithHTML(
+    `📈 <b>Статистика бота</b>\n\n` +
+    `👥 Пользователей: <b>${users.size}</b>\n` +
+    `🏙️ Городов: <b>${citiesAreasData.cities.length}</b>\n` +
+    `🏘️ Районов: <b>${citiesAreasData.areas.length}</b>\n` +
+    `🕌 Всего мест: <b>${citiesAreasData.cities.length + citiesAreasData.areas.length}</b>`
+  );
+});
+
+// === ℹ️ /about ===
+bot.command('about', (ctx) => {
+  ctx.replyWithHTML(
+    `ℹ️ <b>О боте</b>\n\n` +
+    `🕌 <b>Рузнама — Курахский район</b>\n\n` +
+    `Бот предоставляет времена намазов для городов и районов Курахского района.\n\n` +
+    `📩 Разработан для удобства верующих.\n\n` +
+    `© 2025`
+  );
+});
+
+// === 🆕 /newquote ===
+bot.command('newquote', (ctx) => {
+  const q = getRandomQuote();
+  ctx.replyWithHTML(
+    `📘 <b>Хадис дня</b>\n` +
+    `❝ ${q.text} ❞\n` +
+    `— <i>${q.author}</i>`
+  );
+});
+
 // === 🔤 ОБРАБОТКА ТЕКСТА ===
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
@@ -256,13 +300,13 @@ bot.on('text', async (ctx) => {
     );
   }
 
-  // Создаём кнопки для найденных мест
+  // Кнопки для найденных мест
   const keyboard = results.map(loc => [{
     text: `📍 ${loc.name_cities || loc.name_areas}`,
     callback_data: `loc_${loc.id}`
   }]);
 
-  // ✅ УДАЛЕНА КНОПКА "🏠 Главное меню"
+  // УДАЛЕНА: кнопка "🏠 Главное меню"
   // keyboard.push([{ text: '🏠 Главное меню', callback_data: 'cmd_cities_areas' }]);
 
   await ctx.replyWithHTML(
