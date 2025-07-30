@@ -127,12 +127,12 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
   let table = `<pre style="font-family: monospace; white-space: pre;">`;
   // Короткие заголовки: Ф, Ш, З, А, М, И
   table += `Д`.padEnd(col.day + 1) +
-           `Ф`.padEnd(col.time + 1) +
-           `Ш`.padEnd(col.time + 1) +
-           `З`.padEnd(col.time + 1) +
-           `А`.padEnd(col.time + 1) +
-           `М`.padEnd(col.time + 1) +
-           `И`.padEnd(col.time + 1) + '\n';
+           `Фадж.`.padEnd(col.time + 1) +
+           `Шур.`.padEnd(col.time + 1) +
+           `Зухр`.padEnd(col.time + 1) +
+           `Аср`.padEnd(col.time + 1) +
+           `Магр.`.padEnd(col.time + 1) +
+           `Иша`.padEnd(col.time + 1) + '\n';
 
   // Разделитель
   table += '─'.repeat(col.day + col.time * 6 + 6) + '\n';
