@@ -242,7 +242,10 @@ bot.start((ctx) => {
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   const userId = ctx.from.id;
+
+  // Пропускаем команды
   if (text.startsWith('/')) return;
+
   addUser(userId);
   const results = searchLocations(text);
   if (results.length === 0) {
@@ -252,11 +255,14 @@ bot.on('text', async (ctx) => {
       mainMenu
     );
   }
+
+  // Создаём кнопки для найденных мест
   const keyboard = results.map(loc => [{
     text: `📍 ${loc.name_cities || loc.name_areas}`,
     callback_data: `loc_${loc.id}`
   }]);
-  // ✅ УДАЛЕНО: кнопка "🏠 Главное меню"
+
+  // ✅ УДАЛЕНА КНОПКА "🏠 Главное меню"
   // keyboard.push([{ text: '🏠 Главное меню', callback_data: 'cmd_cities_areas' }]);
 
   await ctx.replyWithHTML(
@@ -404,7 +410,7 @@ bot.on('callback_query', async (ctx) => {
   // === 📅 Выбор месяца ===
   if (data.startsWith('select_month_')) {
     const parts = data.split('_');
-    const ruMonth = parts.slice(2, -1).join('_'); // поддержка "ноябрь"
+    const ruMonth = parts.slice(2, -1).join('_');
     const locationId = parts[parts.length - 1];
     const enMonth = getEnglishMonthName(ruMonth);
     if (!enMonth) return await ctx.editMessageText('❌ Месяц не распознан.', getLocationMenu(locationId));
