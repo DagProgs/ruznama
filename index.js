@@ -177,7 +177,6 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
 
 ${table}
 
-🕌 Времена указаны по месту. <i>Точность — залог правильности.</i>
 `.trim();
 }
 
