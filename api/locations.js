@@ -1,4 +1,3 @@
-// api/locations.js
 import fs from 'fs';
 import path from 'path';
 
@@ -14,16 +13,8 @@ export default function handler(req, res) {
     const locations = JSON.parse(data);
 
     const allLocations = [
-      ...locations.cities.map(c => ({
-        id: c.id,
-        name: c.name_cities,
-        type: 'city'
-      })),
-      ...locations.areas.map(a => ({
-        id: a.id,
-        name: a.name_areas,
-        type: 'area'
-      }))
+      ...locations.cities.map(c => ({ id: c.id, name: c.name_cities, type: 'city' })),
+      ...locations.areas.map(a => ({ id: a.id, name: a.name_areas, type: 'area' }))
     ];
 
     res.status(200).json(allLocations);

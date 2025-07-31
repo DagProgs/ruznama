@@ -1,18 +1,14 @@
-// webapp/script.js
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
-// Тема
 document.body.classList.toggle('dark', tg.themeParams.bg_color?.startsWith('#121212'));
 
 const API_BASE = '/api';
-
 const searchInput = document.getElementById('search');
 const resultsEl = document.getElementById('results');
 const timesEl = document.getElementById('times');
 
-// Поиск
 searchInput.addEventListener('input', async (e) => {
   const query = e.target.value.trim();
   if (query.length < 2) {
@@ -33,7 +29,6 @@ searchInput.addEventListener('input', async (e) => {
       </div>
     `).join('');
 
-    // Обработчики кликов
     document.querySelectorAll('.location-item').forEach(item => {
       item.addEventListener('click', () => loadTimes(item.dataset.id, item.textContent.trim().replace(/^.\s/, '')));
     });
@@ -42,7 +37,6 @@ searchInput.addEventListener('input', async (e) => {
   }
 });
 
-// Загрузка времён
 async function loadTimes(id, name) {
   try {
     const [timesRes, quoteRes] = await Promise.all([

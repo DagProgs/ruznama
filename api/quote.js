@@ -1,9 +1,7 @@
-// api/quote.js
 import fs from 'fs';
 import path from 'path';
 
 const quotesPath = path.join(process.cwd(), 'quotes.json');
-
 let quotes = [];
 
 function loadQuotes() {
