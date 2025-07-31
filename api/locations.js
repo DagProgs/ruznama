@@ -1,19 +1,19 @@
+// api/locations.js
 import fs from 'fs';
 import path from 'path';
 
-const citiesAreasPath = path.join(process.cwd(), 'db', 'cities-areas.json');
-
 export default function handler(req, res) {
-  if (req.method !== 'GET') return res.status(405).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  const filePath = path.join(process.cwd(), 'db', 'cities-areas.json');
   try {
-    const data = JSON.parse(fs.readFileSync(citiesAreasPath, 'utf8'));
-    const locations = [
-      ...data.cities.map(c => ({ id: c.id, name: c.name_cities, type: 'city' })),
-      ...data.areas.map(a => ({ id: a.id, name: a.name_areas, type: 'area' }))
-    ];
-    res.json(locations);
-  } catch (e) {
-    res.status(500).json({ error: 'Не удалось загрузить локации' });
+    const data = fs.readFileSync(filePath, 'utf8');
+    const json = JSON.parse(data);
+    res.status(200).json({
+      cities: json.cities || [],
+      areas: json.areas || []
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Не удалось прочитать файл', details: err.message });
   }
 }
