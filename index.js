@@ -3,7 +3,7 @@
  *
  * @author Developer
  * @license MIT
- * @version 1.3.0 (стильный редизайн)
+ * @version 1.4.0 (с запоминанием последнего места)
  */
 import { Telegraf } from 'telegraf';
 import fs from 'fs';
@@ -99,7 +99,7 @@ function fmt(time) {
 }
 
 // ========================================================
-// 📅 ВРЕМЕНА НА СЕГОДНЯ (с красивым оформлением)
+// 📅 ВРЕМЕНА НА СЕГОДНЯ
 // ========================================================
 function getPrayerTimesForToday(timesData) {
   const now = new Date();
@@ -126,19 +126,16 @@ function getPrayerTimesForToday(timesData) {
 }
 
 // ========================================================
-// 📆 ТАБЛИЦА НА МЕСЯЦ (компактная, узкая, под мобильные)
+// 📆 ТАБЛИЦА НА МЕСЯЦ (компактная)
 // ========================================================
 function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за <b>${monthEn}</b>`;
-
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
-  const col = { day: 2, time: 5 }; // Узкие колонки
+  const col = { day: 2, time: 5 };
   let table = `<pre style="font-family: monospace; white-space: pre;">`;
 
-  // Заголовки: Фадж., Шур., Зухр, Аср, Магр., Иша
   table += `Д`.padEnd(col.day + 1) +
            `Фадж.`.padEnd(col.time + 1) +
            `Шур.`.padEnd(col.time + 1) +
@@ -147,14 +144,12 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
            `Магр.`.padEnd(col.time + 1) +
            `Иша`.padEnd(col.time + 1) + '\n';
 
-  // Разделитель
   table += '─'.repeat(col.day + col.time * 6 + 6) + '\n';
 
   for (let d = 1; d <= 31; d++) {
     const dayStr = String(d).padStart(2, '0');
     const dayData = monthData[dayStr];
     let row = d.toString().padEnd(col.day + 1);
-
     if (dayData) {
       const cleanFmt = (t) => fmt(t).replace(/<\/?code>/g, '').trim();
       row += cleanFmt(dayData.Fajr).padEnd(col.time + 1) +
@@ -195,7 +190,7 @@ function getMonthsList(locationId) {
 }
 
 // ========================================================
-// 📍 МЕНЮ МЕСТА (с разделителями и иконками)
+// 📍 МЕНЮ МЕСТА
 // ========================================================
 function getLocationMenu(locationId) {
   return {
@@ -212,34 +207,45 @@ function getLocationMenu(locationId) {
 }
 
 // ========================================================
-// 🏠 ГЛАВНОЕ МЕНЮ (с выравниванием и пробелами)
+// 🏠 ГЛАВНОЕ МЕНЮ (с кнопкой последнего места)
 // ========================================================
-const mainMenu = {
-  reply_markup: {
-    inline_keyboard: [
-      [
-        { text: '🏙️ Города', callback_data: 'cmd_cities' },
-        { text: '🏘️ Районы', callback_data: 'cmd_areas' },
-      ],
-      [{ text: '📖 Хадис дня', callback_data: 'cmd_quote' }],
-      [
-        { text: 'ℹ️ О боте', callback_data: 'cmd_about' },
-        { text: '📊 Статистика', callback_data: 'cmd_stats' },
-      ],
+function getMainMenu(lastLocationId = null) {
+  const keyboard = [
+    [
+      { text: '🏙️ Города', callback_data: 'cmd_cities' },
+      { text: '🏘️ Районы', callback_data: 'cmd_areas' },
     ],
-  },
-};
+    [{ text: '📖 Хадис дня', callback_data: 'cmd_quote' }],
+    [
+      { text: 'ℹ️ О боте', callback_data: 'cmd_about' },
+      { text: '📊 Статистика', callback_data: 'cmd_stats' },
+    ],
+  ];
+
+  // Если есть последнее место — добавляем кнопку
+  if (lastLocationId) {
+    const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == lastLocationId);
+    if (location) {
+      keyboard.unshift([{
+        text: `📌 Последнее: ${location.name_cities || location.name_areas}`,
+        callback_data: `loc_${lastLocationId}`
+      }]);
+    }
+  }
+
+  return { reply_markup: { inline_keyboard: keyboard } };
+}
 
 // ========================================================
-// 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ
+// 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ (с last_location_id)
 // ========================================================
-let users = new Set();
+let users = new Map(); // id → { last_location_id }
 
 function loadUsers() {
   try {
     if (fs.existsSync(usersFilePath)) {
       const loaded = JSON.parse(fs.readFileSync(usersFilePath, 'utf8'));
-      users = new Set(loaded);
+      users = new Map(loaded);
       console.log(`✅ Пользователей загружено: ${users.size}`);
     }
   } catch (e) {
@@ -249,7 +255,8 @@ function loadUsers() {
 
 function saveUsers() {
   try {
-    fs.writeFileSync(usersFilePath, JSON.stringify([...users]), 'utf8');
+    const serializable = Array.from(users.entries());
+    fs.writeFileSync(usersFilePath, JSON.stringify(serializable), 'utf8');
   } catch (e) {
     console.error('❌ Ошибка сохранения users.json:', e.message);
   }
@@ -258,10 +265,23 @@ function saveUsers() {
 function addUser(userId) {
   const id = userId.toString();
   if (!users.has(id)) {
-    users.add(id);
+    users.set(id, { last_location_id: null });
     saveUsers();
     console.log(`🆕 Новый пользователь: ${id} | Всего: ${users.size}`);
   }
+}
+
+function setUserLocation(userId, locationId) {
+  const id = userId.toString();
+  addUser(id); // гарантируем наличие
+  users.get(id).last_location_id = locationId;
+  saveUsers();
+}
+
+function getUserLastLocation(userId) {
+  const id = userId.toString();
+  const user = users.get(id);
+  return user ? user.last_location_id : null;
 }
 
 // ========================================================
@@ -311,7 +331,10 @@ function capitalize(str) {
 // 🚀 КОМАНДА /start
 // ========================================================
 bot.start((ctx) => {
-  addUser(ctx.from.id);
+  const userId = ctx.from.id;
+  addUser(userId);
+  const lastLocationId = getUserLastLocation(userId);
+
   return ctx.replyWithHTML(
     `🕌 <b>Добро пожаловать в «Рузнама»</b>
 ` +
@@ -320,7 +343,7 @@ bot.start((ctx) => {
       `📍 Выберите раздел или введите название населённого пункта.
 ` +
       `🕋 Благодать начинается с намерения.`,
-    mainMenu
+    getMainMenu(lastLocationId)
   ).catch(console.error);
 });
 
@@ -383,7 +406,7 @@ bot.command('newquote', (ctx) => {
 bot.command('day', (ctx) => {
   return ctx.replyWithHTML(
     '⏳ Чтобы увидеть времена намазов на сегодня — выберите место через меню или введите название.',
-    mainMenu
+    getMainMenu(getUserLastLocation(ctx.from.id))
   ).catch(console.error);
 });
 
@@ -393,7 +416,7 @@ bot.command('day', (ctx) => {
 bot.command('month', (ctx) => {
   return ctx.replyWithHTML(
     '📅 Показывает таблицу на текущий месяц. Сначала выберите место.',
-    mainMenu
+    getMainMenu(getUserLastLocation(ctx.from.id))
   ).catch(console.error);
 });
 
@@ -401,7 +424,7 @@ bot.command('month', (ctx) => {
 // 🗓️ /year — заглушка
 // ========================================================
 bot.command('year', (ctx) => {
-  return ctx.replyWithHTML('🗓️ Выберите месяц. Сначала укажите место.', mainMenu)
+  return ctx.replyWithHTML('🗓️ Выберите месяц. Сначала укажите место.', getMainMenu(getUserLastLocation(ctx.from.id)))
     .catch(console.error);
 });
 
@@ -411,21 +434,26 @@ bot.command('year', (ctx) => {
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return;
-  addUser(ctx.from.id);
+
+  const userId = ctx.from.id;
+  addUser(userId);
+
   const results = searchLocations(text);
   if (results.length === 0) {
     return ctx.replyWithHTML(
       `🔍 <b>По запросу «${text}» ничего не найдено.</b>
 Проверьте написание или попробуйте другой вариант.`,
-      mainMenu
+      getMainMenu(getUserLastLocation(userId))
     ).catch(console.error);
   }
+
   const keyboard = results.map((loc) => [
     {
       text: `${loc.name_cities ? '🏙️' : '🏘️'} ${loc.name_cities || loc.name_areas}`,
       callback_data: `loc_${loc.id}`,
     },
   ]);
+
   await ctx.replyWithHTML(
     `🔍 <b>Найдено ${results.length}:</b>`,
     { reply_markup: { inline_keyboard: keyboard } }
@@ -439,8 +467,8 @@ bot.on('callback_query', async (ctx) => {
   if (!ctx.callbackQuery || !ctx.callbackQuery.data) return;
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
-  addUser(userId);
 
+  addUser(userId);
   try {
     await ctx.answerCbQuery().catch(() => {});
   } catch (err) {
@@ -452,7 +480,7 @@ bot.on('callback_query', async (ctx) => {
     if (data === 'cmd_cities_areas') {
       return await ctx.editMessageText('🏠 Выберите раздел:', {
         parse_mode: 'HTML',
-        ...mainMenu,
+        ...getMainMenu(getUserLastLocation(userId)),
       });
     }
 
@@ -461,7 +489,7 @@ bot.on('callback_query', async (ctx) => {
       if (!citiesAreasData.cities.length) {
         return await ctx.editMessageText('📭 Нет доступных городов.', {
           parse_mode: 'HTML',
-          ...mainMenu,
+          ...getMainMenu(getUserLastLocation(userId)),
         });
       }
       const keyboard = citiesAreasData.cities.map((c) => [
@@ -479,7 +507,7 @@ bot.on('callback_query', async (ctx) => {
       if (!citiesAreasData.areas.length) {
         return await ctx.editMessageText('📭 Нет доступных районов.', {
           parse_mode: 'HTML',
-          ...mainMenu,
+          ...getMainMenu(getUserLastLocation(userId)),
         });
       }
       const keyboard = citiesAreasData.areas.map((a) => [
@@ -499,12 +527,16 @@ bot.on('callback_query', async (ctx) => {
         (l) => l.id == id
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
+      // Сохраняем как последнее место
+      setUserLocation(userId, id);
+
       const timesData = loadTimesById(id);
       const name = location.name_cities || location.name_areas;
       if (!timesData) {
         return await ctx.editMessageText(
           `⏳ Времена намазов для <b>${name}</b> пока не добавлены.`,
-          { parse_mode: 'HTML', ...mainMenu }
+          { parse_mode: 'HTML', ...getMainMenu(id) }
         );
       }
       return await ctx.editMessageText(
@@ -525,7 +557,7 @@ bot.on('callback_query', async (ctx) => {
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(id));
       const msg = getPrayerTimesForToday(timesData);
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
@@ -546,7 +578,7 @@ ${msg}`,
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(id));
       const monthEn = getEnglishMonthName('now');
       const msg = getPrayerTimesTableForMonth(timesData, monthEn);
       const name = location.name_cities || location.name_areas;
@@ -568,7 +600,7 @@ ${msg}`,
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(id));
       return await ctx.editMessageText('🗓️ Выберите месяц:', getMonthsList(id));
     }
 
@@ -584,7 +616,7 @@ ${msg}`,
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(locationId);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(locationId));
       const msg = getPrayerTimesTableForMonth(timesData, enMonth);
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
@@ -605,7 +637,7 @@ ${msg}`,
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(id));
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
         `📍 <b>${name}</b>
@@ -626,7 +658,7 @@ ${msg}`,
 — <b>${q.author}</b>`,
         {
           parse_mode: 'HTML',
-          ...mainMenu,
+          ...getMainMenu(getUserLastLocation(userId)),
         }
       );
     }
@@ -640,7 +672,7 @@ ${msg}`,
 © 2025 | Разработан с искренним намерением`,
         {
           parse_mode: 'HTML',
-          ...mainMenu,
+          ...getMainMenu(getUserLastLocation(userId)),
         }
       );
     }
@@ -655,14 +687,14 @@ ${msg}`,
 🕌 <b>Всего мест:</b> <code>${citiesAreasData.cities.length + citiesAreasData.areas.length}</code>`,
         {
           parse_mode: 'HTML',
-          ...mainMenu,
+          ...getMainMenu(getUserLastLocation(userId)),
         }
       );
     }
   } catch (err) {
     console.error('❌ Ошибка при обработке callback:', err.message);
     try {
-      await ctx.editMessageText('❌ Произошла ошибка. Попробуйте позже.', mainMenu);
+      await ctx.editMessageText('❌ Произошла ошибка. Попробуйте позже.', getMainMenu(getUserLastLocation(userId)));
     } catch (e) {
       console.warn('Не удалось отправить сообщение об ошибке');
     }
@@ -673,7 +705,7 @@ ${msg}`,
 // 🚀 ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ И ХАДИСОВ
 // ========================================================
 loadUsers();
-loadQuotes(); // Загружаем хадисы при старте
+loadQuotes();
 
 // ========================================================
 // ☁️ Vercel Webhook
