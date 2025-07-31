@@ -354,7 +354,7 @@
     // Загрузка данных
     let citiesAreasData = { cities: [], areas: [] };
     let locations = [];
-    fetch('/db/cities-areas.json')
+    fetch('../db/cities-areas.json')
       .then(r => r.json())
       .then(data => {
         citiesAreasData = data;
@@ -500,7 +500,7 @@
       document.getElementById('locationName').textContent = name;
       resultsDiv.style.display = 'block';
       try {
-        const response = await fetch(`/db/cities-areas/${id}.json`);
+        const response = await fetch(`../db/cities-areas/${id}.json`);
         if (!response.ok) throw new Error('Файл не найден');
         const data = await response.json();
         const now = new Date();
