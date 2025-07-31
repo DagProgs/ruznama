@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/*.js",
+      "src": "index.js",
       "use": "@vercel/node"
     },
     {
@@ -24,8 +24,8 @@
       "dest": "/webapp/$1"
     },
     {
-      "src": "/",
-      "dest": "/api" 
+      "src": "/(.*)",
+      "dest": "index.js"
     }
   ]
 }
