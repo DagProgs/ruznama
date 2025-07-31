@@ -111,7 +111,6 @@ function getPrayerTimesForToday(timesData) {
   if (!monthData) return `❌ Нет данных за <b>${monthRuCap}</b>`;
   const dayData = monthData[day];
   if (!dayData) return `❌ Нет данных на <b>${day} ${monthRuCap}</b>`;
-
   return `
 ✨ <b>Времена намазов на сегодня</b>
 📅 <i>${day} ${monthRuCap}</i>
@@ -131,13 +130,10 @@ function getPrayerTimesForToday(timesData) {
 function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за <b>${monthEn}</b>`;
-
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
   const col = { day: 2, time: 5 }; // Узкие колонки
   let table = `<pre style="font-family: monospace; white-space: pre;">`;
-
   // Заголовки: Фадж., Шур., Зухр, Аср, Магр., Иша
   table += `Д`.padEnd(col.day + 1) +
            `Фадж.`.padEnd(col.time + 1) +
@@ -146,15 +142,12 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
            `Аср`.padEnd(col.time + 1) +
            `Магр.`.padEnd(col.time + 1) +
            `Иша`.padEnd(col.time + 1) + '\n';
-
   // Разделитель
   table += '─'.repeat(col.day + col.time * 6 + 6) + '\n';
-
   for (let d = 1; d <= 31; d++) {
     const dayStr = String(d).padStart(2, '0');
     const dayData = monthData[dayStr];
     let row = d.toString().padEnd(col.day + 1);
-
     if (dayData) {
       const cleanFmt = (t) => fmt(t).replace(/<\/?code>/g, '').trim();
       row += cleanFmt(dayData.Fajr).padEnd(col.time + 1) +
@@ -169,7 +162,6 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
     table += row + '\n';
   }
   table += '</pre>';
-
   return `
 🗓️ <b>Намазы — ${monthRuCap}</b>
 ${table}
@@ -226,6 +218,12 @@ const mainMenu = {
         { text: 'ℹ️ О боте', callback_data: 'cmd_about' },
         { text: '📊 Статистика', callback_data: 'cmd_stats' },
       ],
+      [
+        {
+          text: '📱 Открыть Mini App',
+          web_app: { url: 'https://ruznama.vercel.app/webapp' } // ← ваш URL
+        }
+      ],
     ],
   },
 };
@@ -234,7 +232,6 @@ const mainMenu = {
 // 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ
 // ========================================================
 let users = new Set();
-
 function loadUsers() {
   try {
     if (fs.existsSync(usersFilePath)) {
@@ -440,13 +437,11 @@ bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
   addUser(userId);
-
   try {
     await ctx.answerCbQuery().catch(() => {});
   } catch (err) {
     console.warn('⚠️ Не удалось ответить на callback:', err.message);
   }
-
   try {
     // 🏠 Главное меню
     if (data === 'cmd_cities_areas') {
@@ -455,7 +450,6 @@ bot.on('callback_query', async (ctx) => {
         ...mainMenu,
       });
     }
-
     // 🏙️ Города
     if (data === 'cmd_cities') {
       if (!citiesAreasData.cities.length) {
@@ -473,7 +467,6 @@ bot.on('callback_query', async (ctx) => {
         reply_markup: { inline_keyboard: keyboard },
       });
     }
-
     // 🏘️ Районы
     if (data === 'cmd_areas') {
       if (!citiesAreasData.areas.length) {
@@ -491,7 +484,6 @@ bot.on('callback_query', async (ctx) => {
         reply_markup: { inline_keyboard: keyboard },
       });
     }
-
     // 📍 Выбор места
     if (data.startsWith('loc_')) {
       const id = data.split('_')[1];
@@ -516,7 +508,6 @@ bot.on('callback_query', async (ctx) => {
         }
       );
     }
-
     // 🕐 Сегодня
     if (data.startsWith('day_')) {
       const id = data.split('_')[1];
@@ -537,7 +528,6 @@ ${msg}`,
         }
       );
     }
-
     // 📅 Месяц (текущий)
     if (data.startsWith('month_')) {
       const id = data.split('_')[1];
@@ -559,7 +549,6 @@ ${msg}`,
         }
       );
     }
-
     // 🗓️ Год → выбор месяца
     if (data.startsWith('year_')) {
       const id = data.split('_')[1];
@@ -571,7 +560,6 @@ ${msg}`,
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       return await ctx.editMessageText('🗓️ Выберите месяц:', getMonthsList(id));
     }
-
     // 📅 Выбор месяца
     if (data.startsWith('select_month_')) {
       const parts = data.split('_');
@@ -596,7 +584,6 @@ ${msg}`,
         }
       );
     }
-
     // 🔙 Назад к месту
     if (data.startsWith('back_to_loc_')) {
       const id = data.split('_')[3];
@@ -616,7 +603,6 @@ ${msg}`,
         }
       );
     }
-
     // 📜 Хадис дня
     if (data === 'cmd_quote') {
       const q = getRandomQuote();
@@ -630,7 +616,6 @@ ${msg}`,
         }
       );
     }
-
     // ℹ️ О боте
     if (data === 'cmd_about') {
       return await ctx.editMessageText(
@@ -644,7 +629,6 @@ ${msg}`,
         }
       );
     }
-
     // 📊 Статистика
     if (data === 'cmd_stats') {
       return await ctx.editMessageText(

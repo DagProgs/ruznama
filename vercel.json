@@ -8,7 +8,14 @@
   ],
   "routes": [
     {
-      "src": "/",
+      "src": "/webapp/(.*)",
+      "dest": "/webapp/$1",
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+      }
+    },
+    {
+      "src": "/(.*)",
       "dest": "index.js"
     }
   ]
