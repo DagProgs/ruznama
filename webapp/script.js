@@ -1,14 +1,19 @@
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+// Инициализация Telegram WebApp
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  document.body.classList.toggle('dark', tg.themeParams.bg_color?.startsWith('#121212'));
+}
 
-document.body.classList.toggle('dark', tg.themeParams.bg_color?.startsWith('#121212'));
-
+// API
 const API_BASE = '/api';
+
 const searchInput = document.getElementById('search');
 const resultsEl = document.getElementById('results');
 const timesEl = document.getElementById('times');
 
+// Поиск
 searchInput.addEventListener('input', async (e) => {
   const query = e.target.value.trim();
   if (query.length < 2) {
@@ -19,6 +24,7 @@ searchInput.addEventListener('input', async (e) => {
   try {
     const res = await fetch(`${API_BASE}/locations`);
     const locations = await res.json();
+
     const filtered = locations.filter(loc =>
       loc.name.toLowerCase().includes(query.toLowerCase())
     );
@@ -30,13 +36,18 @@ searchInput.addEventListener('input', async (e) => {
     `).join('');
 
     document.querySelectorAll('.location-item').forEach(item => {
-      item.addEventListener('click', () => loadTimes(item.dataset.id, item.textContent.trim().replace(/^.\s/, '')));
+      item.addEventListener('click', () => {
+        const id = item.dataset.id;
+        const name = item.textContent.trim().replace(/^.\s/, '');
+        loadTimes(id, name);
+      });
     });
   } catch (err) {
     resultsEl.innerHTML = '<div class="error">Ошибка загрузки</div>';
   }
 });
 
+// Загрузка времён
 async function loadTimes(id, name) {
   try {
     const [timesRes, quoteRes] = await Promise.all([
@@ -44,9 +55,9 @@ async function loadTimes(id, name) {
       fetch(`${API_BASE}/quote`).then(r => r.json())
     ]);
 
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = today.toLocaleString('en-GB', { month: 'long' });
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = now.toLocaleString('en-GB', { month: 'long' });
     const monthData = timesRes[month];
     const dayData = monthData?.[day];
 

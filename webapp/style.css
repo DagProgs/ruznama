@@ -4,12 +4,16 @@
   box-sizing: border-box;
 }
 
-body, html {
+body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg-color, #f5f5f5);
-  color: var(--text-color, #111);
-  height: 100%;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: #f5f5f5;
+  color: #1c1c1e;
+  line-height: 1.6;
+}
+
+body.dark {
+  background: #121212;
+  color: #f0f0f0;
 }
 
 .app {
@@ -20,66 +24,99 @@ body, html {
 
 header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 header h1 {
-  font-size: 1.8rem;
-  color: #007acc;
+  font-size: 24px;
+  margin-bottom: 4px;
 }
 
 header p {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 14px;
+  opacity: 0.7;
 }
 
-#search {
+input#search {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #ccc;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 1px solid #ddd;
   border-radius: 12px;
-  font-size: 1rem;
-  margin-bottom: 16px;
-  background: var(--input-bg, #fff);
-  color: var(--text-color);
+  outline: none;
+  background: #fff;
+  transition: border 0.2s;
+}
+
+body.dark input#search {
+  background: #2c2c2e;
+  border-color: #444;
+  color: #fff;
+}
+
+input#search:focus {
+  border-color: #007aff;
 }
 
 .list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
+  margin: 16px 0;
 }
 
 .location-item {
-  padding: 12px;
-  background: var(--card-bg, #fff);
+  padding: 12px 16px;
+  background: #fff;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  margin-bottom: 8px;
   cursor: pointer;
-  transition: 0.2s;
+  font-size: 16px;
+  border: 1px solid #eee;
 }
 
-.location-item:hover {
-  background: #eef7ff;
+body.dark .location-item {
+  background: #2c2c2e;
+  border-color: #444;
+  color: #fff;
+}
+
+.location-item:last-child {
+  margin-bottom: 0;
 }
 
 .times {
-  background: var(--card-bg, #fff);
+  margin-top: 16px;
   padding: 16px;
+  background: #fff;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-  font-family: monospace;
   white-space: pre-line;
+  font-size: 15px;
+  line-height: 2;
+  border: 1px solid #eee;
+}
+
+body.dark .times {
+  background: #2c2c2e;
+  border-color: #444;
 }
 
 .times b {
-  color: #007acc;
+  font-weight: 600;
 }
 
-body.dark, body[data-theme="dark"] {
-  --bg-color: #121212;
-  --text-color: #fff;
-  --card-bg: #1e1e1e;
-  --input-bg: #2d2d2d;
+.times code {
+  background: #f0f0f0;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+body.dark .times code {
+  background: #444;
+  color: #fff;
+}
+
+.error {
+  color: #ff3b30;
+  font-size: 15px;
+  text-align: center;
+  padding: 16px;
 }
