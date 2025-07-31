@@ -12,10 +12,6 @@
     {
       "src": "api/**/*.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "api/times-today.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [

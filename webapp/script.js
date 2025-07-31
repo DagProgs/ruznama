@@ -1,18 +1,22 @@
-document.getElementById('refresh').addEventListener('click', () => {
-  fetch('/api/times/today') // пример API для получения данных
+document.getElementById('searchBtn').addEventListener('click', () => {
+  const query = document.getElementById('search').value;
+  fetch(`/api/locations?query=${encodeURIComponent(query)}`)
     .then(res => res.json())
     .then(data => {
-      document.getElementById('content').innerHTML = `
-        <h2>Времена намазов на сегодня</h2>
-        <pre>${data.times}</pre>
-        <h2>Хадис дня</h2>
-        <p>${data.quote}</p>
-      `;
-    })
-    .catch(console.error);
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+      if (data.results.length === 0) {
+        resultsDiv.innerHTML = 'Ничего не найдено.';
+        return;
+      }
+      data.results.forEach(loc => {
+        const btn = document.createElement('button');
+        btn.textContent = loc.name_cities || loc.name_areas;
+        btn.onclick = () => {
+          alert(`Местоположение: ${btn.textContent}`);
+          // Можно дополнительно вызвать API для получения времени
+        };
+        resultsDiv.appendChild(btn);
+      });
+    });
 });
-
-// Можно добавить автоматический вызов при загрузке
-window.onload = () => {
-  document.getElementById('refresh').click();
-};

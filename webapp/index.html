@@ -2,16 +2,17 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Mini App — Рузнама</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Рузнама WebApp</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<h1>Добро пожаловать в мини-приложение</h1>
-<div id="content">
-  <p>Здесь будет отображаться информация о намазах, хадисах и т.д.</p>
+<h1>Рузнама — WebApp</h1>
+<div>
+  <input type="text" id="search" placeholder="Введите название города или района" />
+  <button id="searchBtn">Искать</button>
 </div>
-<button id="refresh">Обновить данные</button>
+<div id="results"></div>
 
 <script src="script.js"></script>
 </body>
