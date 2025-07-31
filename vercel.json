@@ -12,13 +12,16 @@
     {
       "src": "api/**/*.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/times-today.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1",
-      "methods": ["GET", "POST"]
+      "dest": "/api/$1"
     },
     {
       "src": "/webapp",
@@ -34,8 +37,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "index.js",
-      "methods": ["POST"]
+      "dest": "/index.js"
     }
   ]
 }

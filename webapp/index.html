@@ -1,68 +1,18 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Рузнама — Времена намазов</title>
-  <meta name="theme-color" content="#1d1d1d" />
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mini App — Рузнама</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container" id="app">
-    <!-- Экран: Выбор места -->
-    <section id="locations-screen" class="screen active">
-      <h1>🕌 Рузнама</h1>
-      <p>Выберите населённый пункт</p>
-      <input type="text" id="search-input" placeholder="Поиск..." />
-      <div id="locations-list" class="locations-grid"></div>
-    </section>
+<h1>Добро пожаловать в мини-приложение</h1>
+<div id="content">
+  <p>Здесь будет отображаться информация о намазах, хадисах и т.д.</p>
+</div>
+<button id="refresh">Обновить данные</button>
 
-    <!-- Экран: Намазы -->
-    <section id="prayer-screen" class="screen">
-      <header class="prayer-header">
-        <button id="back-btn">< Назад</button>
-        <h2 id="location-title">Загрузка...</h2>
-      </header>
-
-      <div class="tabs">
-        <button class="tab active" data-tab="today">Сегодня</button>
-        <button class="tab" data-tab="month">Месяц</button>
-        <button class="tab" data-tab="quote">Хадис</button>
-      </div>
-
-      <!-- Сегодня -->
-      <div id="today-tab" class="tab-content">
-        <div class="prayer-grid">
-          <div><b>Фаджр</b></div> <div id="fajr">—</div>
-          <div><b>Шурук</b></div> <div id="sunrise">—</div>
-          <div><b>Зухр</b></div> <div id="dhuhr">—</div>
-          <div><b>Аср</b></div> <div id="asr">—</div>
-          <div><b>Магриб</b></div> <div id="maghrib">—</div>
-          <div><b>Иша</b></div> <div id="isha">—</div>
-        </div>
-      </div>
-
-      <!-- Месяц -->
-      <div id="month-tab" class="tab-content hidden">
-        <div class="month-controls">
-          <button id="prev-month"><</button>
-          <h3 id="month-title">Загрузка...</h3>
-          <button id="next-month">></button>
-        </div>
-        <div id="month-table" class="month-table"></div>
-      </div>
-
-      <!-- Хадис дня -->
-      <div id="quote-tab" class="tab-content hidden">
-        <div class="quote-box">
-          <p id="quote-text">Загрузка хадиса...</p>
-          <footer>— <span id="quote-author">...</span></footer>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
