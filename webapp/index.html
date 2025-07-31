@@ -1,0 +1,29 @@
+<!-- webapp/index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🕌 Рузнама</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🕌 Рузнама</h1>
+      <p>Времена намазов для Дагестана</p>
+    </header>
+
+    <main>
+      <input type="text" id="search" placeholder="Поиск города или района..." />
+
+      <div id="results" class="list"></div>
+
+      <div id="times" class="times"></div>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
