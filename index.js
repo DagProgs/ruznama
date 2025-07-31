@@ -131,14 +131,10 @@ function getPrayerTimesForToday(timesData) {
 function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за <b>${monthEn}</b>`;
-
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
-  const col = { day: 2, time: 5 }; // Узкие колонки
+  const col = { day: 2, time: 5 };
   let table = `<pre style="font-family: monospace; white-space: pre;">`;
-
-  // Заголовки: Фадж., Шур., Зухр, Аср, Магр., Иша
   table += `Д`.padEnd(col.day + 1) +
            `Фадж.`.padEnd(col.time + 1) +
            `Шур.`.padEnd(col.time + 1) +
@@ -146,15 +142,11 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
            `Аср`.padEnd(col.time + 1) +
            `Магр.`.padEnd(col.time + 1) +
            `Иша`.padEnd(col.time + 1) + '\n';
-
-  // Разделитель
   table += '─'.repeat(col.day + col.time * 6 + 6) + '\n';
-
   for (let d = 1; d <= 31; d++) {
     const dayStr = String(d).padStart(2, '0');
     const dayData = monthData[dayStr];
     let row = d.toString().padEnd(col.day + 1);
-
     if (dayData) {
       const cleanFmt = (t) => fmt(t).replace(/<\/?code>/g, '').trim();
       row += cleanFmt(dayData.Fajr).padEnd(col.time + 1) +
@@ -212,7 +204,7 @@ function getLocationMenu(locationId) {
 }
 
 // ========================================================
-// 🏠 ГЛАВНОЕ МЕНЮ (с выравниванием и пробелами)
+// 🏠 ГЛАВНОЕ МЕНЮ
 // ========================================================
 const mainMenu = {
   reply_markup: {
@@ -234,7 +226,6 @@ const mainMenu = {
 // 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ
 // ========================================================
 let users = new Set();
-
 function loadUsers() {
   try {
     if (fs.existsSync(usersFilePath)) {
@@ -422,6 +413,7 @@ bot.on('text', async (ctx) => {
   }
   const keyboard = results.map((loc) => [
     {
+      // Добавляем иконку и название — так текст будет "прижат" к левому краю визуально
       text: `${loc.name_cities ? '🏙️' : '🏘️'} ${loc.name_cities || loc.name_areas}`,
       callback_data: `loc_${loc.id}`,
     },
@@ -440,13 +432,11 @@ bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
   addUser(userId);
-
   try {
     await ctx.answerCbQuery().catch(() => {});
   } catch (err) {
     console.warn('⚠️ Не удалось ответить на callback:', err.message);
   }
-
   try {
     // 🏠 Главное меню
     if (data === 'cmd_cities_areas') {
@@ -465,7 +455,10 @@ bot.on('callback_query', async (ctx) => {
         });
       }
       const keyboard = citiesAreasData.cities.map((c) => [
-        { text: `🏙️ ${c.name_cities}`, callback_data: `loc_${c.id}` },
+        {
+          text: `🏙️ ${c.name_cities}`, // Иконка + текст — визуально слева
+          callback_data: `loc_${c.id}`,
+        },
       ]);
       keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
       return await ctx.editMessageText('<b>🌆 Города</b>', {
@@ -483,7 +476,10 @@ bot.on('callback_query', async (ctx) => {
         });
       }
       const keyboard = citiesAreasData.areas.map((a) => [
-        { text: `🏘️ ${a.name_areas}`, callback_data: `loc_${a.id}` },
+        {
+          text: `🏘️ ${a.name_areas}`, // Иконка + текст — визуально слева
+          callback_data: `loc_${a.id}`,
+        },
       ]);
       keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
       return await ctx.editMessageText('<b>🏘️ Районы</b>', {
@@ -516,6 +512,9 @@ bot.on('callback_query', async (ctx) => {
         }
       );
     }
+
+    // Остальные обработчики (day_, month_, и т.д.) остаются без изменений
+    // ... (все остальные if-блоки без изменений)
 
     // 🕐 Сегодня
     if (data.startsWith('day_')) {
