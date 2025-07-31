@@ -3,7 +3,7 @@
  *
  * @author Developer
  * @license MIT
- * @version 1.3.0 (стильный редизайн на MarkdownV2)
+ * @version 1.3.0 (стильный редизайн)
  */
 import { Telegraf } from 'telegraf';
 import fs from 'fs';
@@ -94,8 +94,8 @@ function loadTimesById(id) {
 // ========================================================
 function fmt(time) {
   return Array.isArray(time) && time.length >= 2
-    ? `\\`\\`\\`${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}\\`\\`\\``
-    : `\\`\\`\\`—\\`\\`\\``;
+    ? `<code>${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}</code>`
+    : '<code>—</code>';
 }
 
 // ========================================================
@@ -108,20 +108,19 @@ function getPrayerTimesForToday(timesData) {
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
   const monthData = timesData[monthEn];
-  if (!monthData) return `❌ Нет данных за *${escapeMarkdown(monthRuCap)}*`;
-
+  if (!monthData) return `❌ Нет данных за <b>${monthRuCap}</b>`;
   const dayData = monthData[day];
-  if (!dayData) return `❌ Нет данных на *${day} ${escapeMarkdown(monthRuCap)}*`;
+  if (!dayData) return `❌ Нет данных на <b>${day} ${monthRuCap}</b>`;
 
   return `
-✨ *Времена намазов на сегодня*
-📅 _${day} ${escapeMarkdown(monthRuCap)}_
-🕌 *Фаджр*   —  ${fmt(dayData.Fajr)}
-🌅 *Шурук*   —  ${fmt(dayData.Sunrise)}
-☀️ *Зухр*    —  ${fmt(dayData.Dhuhr)}
-🌇 *Аср*     —  ${fmt(dayData.Asr)}
-🌆 *Магриб*  —  ${fmt(dayData.Maghrib)}
-🌙 *Иша*     —  ${fmt(dayData.Isha)}
+✨ <b>Времена намазов на сегодня</b>
+📅 <i>${day} ${monthRuCap}</i>
+🕌 <b>Фаджр</b>   —  ${fmt(dayData.Fajr)}
+🌅 <b>Шурук</b>   —  ${fmt(dayData.Sunrise)}
+☀️ <b>Зухр</b>    —  ${fmt(dayData.Dhuhr)}
+🌇 <b>Аср</b>     —  ${fmt(dayData.Asr)}
+🌆 <b>Магриб</b>  —  ${fmt(dayData.Maghrib)}
+🌙 <b>Иша</b>     —  ${fmt(dayData.Isha)}
 🕋 Пусть ваш намаз будет принят.
 `.trim();
 }
@@ -131,15 +130,15 @@ function getPrayerTimesForToday(timesData) {
 // ========================================================
 function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthData = timesData[monthEn];
-  if (!monthData) return `❌ Нет данных за *${escapeMarkdown(monthEn)}*`;
+  if (!monthData) return `❌ Нет данных за <b>${monthEn}</b>`;
 
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
 
   const col = { day: 2, time: 5 }; // Узкие колонки
-  let table = "\\`\\`\\`\n";
+  let table = `<pre style="font-family: monospace; white-space: pre;">`;
 
-  // Заголовки
+  // Заголовки: Фадж., Шур., Зухр, Аср, Магр., Иша
   table += `Д`.padEnd(col.day + 1) +
            `Фадж.`.padEnd(col.time + 1) +
            `Шур.`.padEnd(col.time + 1) +
@@ -148,6 +147,7 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
            `Магр.`.padEnd(col.time + 1) +
            `Иша`.padEnd(col.time + 1) + '\n';
 
+  // Разделитель
   table += '─'.repeat(col.day + col.time * 6 + 6) + '\n';
 
   for (let d = 1; d <= 31; d++) {
@@ -156,7 +156,7 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
     let row = d.toString().padEnd(col.day + 1);
 
     if (dayData) {
-      const cleanFmt = (t) => fmt(t).replace(/\\`\\`\\`/g, '').trim();
+      const cleanFmt = (t) => fmt(t).replace(/<\/?code>/g, '').trim();
       row += cleanFmt(dayData.Fajr).padEnd(col.time + 1) +
              cleanFmt(dayData.Sunrise).padEnd(col.time + 1) +
              cleanFmt(dayData.Dhuhr).padEnd(col.time + 1) +
@@ -168,20 +168,12 @@ function getPrayerTimesTableForMonth(timesData, monthEn) {
     }
     table += row + '\n';
   }
-  table += "\\`\\`\\`";
+  table += '</pre>';
 
   return `
-🗓️ *Намазы — ${escapeMarkdown(monthRuCap)}*
+🗓️ <b>Намазы — ${monthRuCap}</b>
 ${table}
 `.trim();
-}
-
-// ========================================================
-// 🛠️ Экранирование для MarkdownV2
-// ========================================================
-function escapeMarkdown(text) {
-  return text
-    .replace(/([_\*\[\]\(\)~`>#+\-=|{}.!\\])/g, '\\$1');
 }
 
 // ========================================================
@@ -198,7 +190,6 @@ function getMonthsList(locationId) {
       acc[acc.length - 1].push(btn);
       return acc;
     }, []);
-
   keyboard.push([{ text: '⬅️ Назад', callback_data: `back_to_loc_${locationId}` }]);
   return { reply_markup: { inline_keyboard: keyboard } };
 }
@@ -221,7 +212,7 @@ function getLocationMenu(locationId) {
 }
 
 // ========================================================
-// 🏠 ГЛАВНОЕ МЕНЮ
+// 🏠 ГЛАВНОЕ МЕНЮ (с выравниванием и пробелами)
 // ========================================================
 const mainMenu = {
   reply_markup: {
@@ -277,7 +268,6 @@ function addUser(userId) {
 // 📜 ХАДИС ДНЯ
 // ========================================================
 let quotes = [];
-
 function loadQuotes() {
   try {
     const quotesPath = path.join(process.cwd(), 'quotes.json');
@@ -322,11 +312,14 @@ function capitalize(str) {
 // ========================================================
 bot.start((ctx) => {
   addUser(ctx.from.id);
-  return ctx.replyWithMarkdownV2(
-    `🕌 *Добро пожаловать в «Рузнама»*\n\n` +
-      `«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». \\(Тирмизи\\)\n\n` +
-      `📍 Выберите раздел или введите название населённого пункта\\.\n` +
-      `🕋 Благодать начинается с намерения\\.`,
+  return ctx.replyWithHTML(
+    `🕌 <b>Добро пожаловать в «Рузнама»</b>
+` +
+      `«Самое лучшее деяние — это намаз, совершённый в начале отведённого для него времени». (Тирмизи)
+` +
+      `📍 Выберите раздел или введите название населённого пункта.
+` +
+      `🕋 Благодать начинается с намерения.`,
     mainMenu
   ).catch(console.error);
 });
@@ -335,15 +328,15 @@ bot.start((ctx) => {
 // 🆘 /help
 // ========================================================
 bot.command('help', (ctx) => {
-  return ctx.replyWithMarkdownV2(
-    `📘 *Справка по боту*\n` +
-      `• */start* — Главное меню\n` +
-      `• */help* — Помощь\n` +
-      `• */stats* — Статистика\n` +
-      `• */about* — О проекте\n` +
-      `• */newquote* — Новый хадис\n` +
-      `• */day* — Времена намазов на сегодня\n` +
-      `• */month* — Таблица на месяц`
+  return ctx.replyWithHTML(
+    `📘 <b>Справка по боту</b>
+• <b>/start</b> — Главное меню
+• <b>/help</b> — Помощь
+• <b>/stats</b> — Статистика
+• <b>/about</b> — О проекте
+• <b>/newquote</b> — Новый хадис
+• <b>/day</b> — Времена намазов на сегодня
+• <b>/month</b> — Таблица на месяц`
   ).catch(console.error);
 });
 
@@ -351,12 +344,12 @@ bot.command('help', (ctx) => {
 // 📊 /stats
 // ========================================================
 bot.command('stats', (ctx) => {
-  return ctx.replyWithMarkdownV2(
-    `📊 *Статистика бота*\n` +
-      `👥 *Пользователей:* \\`${users.size}\\`\n` +
-      `🏙️ *Городов:* \\`${citiesAreasData.cities.length}\\`\n` +
-      `🏘️ *Районов:* \\`${citiesAreasData.areas.length}\\`\n` +
-      `🕌 *Всего мест:* \\`${citiesAreasData.cities.length + citiesAreasData.areas.length}\\``
+  return ctx.replyWithHTML(
+    `📊 <b>Статистика бота</b>
+👥 <b>Пользователей:</b> <code>${users.size}</code>
+🏙️ <b>Городов:</b> <code>${citiesAreasData.cities.length}</code>
+🏘️ <b>Районов:</b> <code>${citiesAreasData.areas.length}</code>
+🕌 <b>Всего мест:</b> <code>${citiesAreasData.cities.length + citiesAreasData.areas.length}</code>`
   ).catch(console.error);
 });
 
@@ -364,11 +357,11 @@ bot.command('stats', (ctx) => {
 // ℹ️ /about
 // ========================================================
 bot.command('about', (ctx) => {
-  return ctx.replyWithMarkdownV2(
-    `ℹ️ *О боте «Рузнама»*\n` +
-      `🕌 Предоставляет точные времена намазов для городов и районов\\.\n` +
-      `📩 Создан с заботой о верующих\\.\n` +
-      `© 2025 \\| Разработан с искренним намерением`
+  return ctx.replyWithHTML(
+    `ℹ️ <b>О боте «Рузнама»</b>
+🕌 Предоставляет точные времена намазов для городов и районов.
+📩 Создан с заботой о верующих.
+© 2025 | Разработан с искренним намерением`
   ).catch(console.error);
 });
 
@@ -377,10 +370,10 @@ bot.command('about', (ctx) => {
 // ========================================================
 bot.command('newquote', (ctx) => {
   const q = getRandomQuote();
-  return ctx.replyWithMarkdownV2(
-    `📘 *Хадис дня*\n` +
-      `❝ _${escapeMarkdown(q.text)}_ ❞\n` +
-      `— *${escapeMarkdown(q.author)}*`
+  return ctx.replyWithHTML(
+    `📘 <b>Хадис дня</b>
+❝ <i>${q.text}</i> ❞
+— <b>${q.author}</b>`
   ).catch(console.error);
 });
 
@@ -388,8 +381,8 @@ bot.command('newquote', (ctx) => {
 // 🕐 /day — заглушка
 // ========================================================
 bot.command('day', (ctx) => {
-  return ctx.replyWithMarkdownV2(
-    '⏳ Чтобы увидеть времена намазов на сегодня — выберите место через меню или введите название\\.',
+  return ctx.replyWithHTML(
+    '⏳ Чтобы увидеть времена намазов на сегодня — выберите место через меню или введите название.',
     mainMenu
   ).catch(console.error);
 });
@@ -398,8 +391,8 @@ bot.command('day', (ctx) => {
 // 📅 /month — заглушка
 // ========================================================
 bot.command('month', (ctx) => {
-  return ctx.replyWithMarkdownV2(
-    '📅 Показывает таблицу на текущий месяц\\. Сначала выберите место\\.',
+  return ctx.replyWithHTML(
+    '📅 Показывает таблицу на текущий месяц. Сначала выберите место.',
     mainMenu
   ).catch(console.error);
 });
@@ -408,7 +401,7 @@ bot.command('month', (ctx) => {
 // 🗓️ /year — заглушка
 // ========================================================
 bot.command('year', (ctx) => {
-  return ctx.replyWithMarkdownV2('🗓️ Выберите месяц\\. Сначала укажите место\\.', mainMenu)
+  return ctx.replyWithHTML('🗓️ Выберите месяц. Сначала укажите место.', mainMenu)
     .catch(console.error);
 });
 
@@ -421,20 +414,20 @@ bot.on('text', async (ctx) => {
   addUser(ctx.from.id);
   const results = searchLocations(text);
   if (results.length === 0) {
-    return ctx.replyWithMarkdownV2(
-      `🔍 *По запросу «${escapeMarkdown(text)}» ничего не найдено\\.*\n` +
-      `Проверьте написание или попробуйте другой вариант\\.`,
+    return ctx.replyWithHTML(
+      `🔍 <b>По запросу «${text}» ничего не найдено.</b>
+Проверьте написание или попробуйте другой вариант.`,
       mainMenu
     ).catch(console.error);
   }
   const keyboard = results.map((loc) => [
     {
-      text: `${loc.name_cities ? '🏙️' : '🏘️'} ${escapeMarkdown(loc.name_cities || loc.name_areas)}`,
+      text: `${loc.name_cities ? '🏙️' : '🏘️'} ${loc.name_cities || loc.name_areas}`,
       callback_data: `loc_${loc.id}`,
     },
   ]);
-  await ctx.replyWithMarkdownV2(
-    `🔍 *Найдено ${results.length}:*`,
+  await ctx.replyWithHTML(
+    `🔍 <b>Найдено ${results.length}:</b>`,
     { reply_markup: { inline_keyboard: keyboard } }
   ).catch(console.error);
 });
@@ -447,6 +440,7 @@ bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
   addUser(userId);
+
   try {
     await ctx.answerCbQuery().catch(() => {});
   } catch (err) {
@@ -457,7 +451,7 @@ bot.on('callback_query', async (ctx) => {
     // 🏠 Главное меню
     if (data === 'cmd_cities_areas') {
       return await ctx.editMessageText('🏠 Выберите раздел:', {
-        parse_mode: 'MarkdownV2',
+        parse_mode: 'HTML',
         ...mainMenu,
       });
     }
@@ -465,17 +459,17 @@ bot.on('callback_query', async (ctx) => {
     // 🏙️ Города
     if (data === 'cmd_cities') {
       if (!citiesAreasData.cities.length) {
-        return await ctx.editMessageText('📭 Нет доступных городов\\.', {
-          parse_mode: 'MarkdownV2',
+        return await ctx.editMessageText('📭 Нет доступных городов.', {
+          parse_mode: 'HTML',
           ...mainMenu,
         });
       }
       const keyboard = citiesAreasData.cities.map((c) => [
-        { text: `🏙️ ${escapeMarkdown(c.name_cities)}`, callback_data: `loc_${c.id}` },
+        { text: `🏙️ ${c.name_cities}`, callback_data: `loc_${c.id}` },
       ]);
       keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
-      return await ctx.editMessageText('*🌆 Города*', {
-        parse_mode: 'MarkdownV2',
+      return await ctx.editMessageText('<b>🌆 Города</b>', {
+        parse_mode: 'HTML',
         reply_markup: { inline_keyboard: keyboard },
       });
     }
@@ -483,17 +477,17 @@ bot.on('callback_query', async (ctx) => {
     // 🏘️ Районы
     if (data === 'cmd_areas') {
       if (!citiesAreasData.areas.length) {
-        return await ctx.editMessageText('📭 Нет доступных районов\\.', {
-          parse_mode: 'MarkdownV2',
+        return await ctx.editMessageText('📭 Нет доступных районов.', {
+          parse_mode: 'HTML',
           ...mainMenu,
         });
       }
       const keyboard = citiesAreasData.areas.map((a) => [
-        { text: `🏘️ ${escapeMarkdown(a.name_areas)}`, callback_data: `loc_${a.id}` },
+        { text: `🏘️ ${a.name_areas}`, callback_data: `loc_${a.id}` },
       ]);
       keyboard.push([{ text: '⬅️ Назад', callback_data: 'cmd_cities_areas' }]);
-      return await ctx.editMessageText('*🏘️ Районы*', {
-        parse_mode: 'MarkdownV2',
+      return await ctx.editMessageText('<b>🏘️ Районы</b>', {
+        parse_mode: 'HTML',
         reply_markup: { inline_keyboard: keyboard },
       });
     }
@@ -504,19 +498,20 @@ bot.on('callback_query', async (ctx) => {
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
-      if (!location) return await ctx.editMessageText('❌ Место не найдено\\.');
+      if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
       const name = location.name_cities || location.name_areas;
       if (!timesData) {
         return await ctx.editMessageText(
-          `⏳ Времена намазов для *${escapeMarkdown(name)}* пока не добавлены\\.`,
-          { parse_mode: 'MarkdownV2', ...mainMenu }
+          `⏳ Времена намазов для <b>${name}</b> пока не добавлены.`,
+          { parse_mode: 'HTML', ...mainMenu }
         );
       }
       return await ctx.editMessageText(
-        `📍 *${escapeMarkdown(name)}*\nВыберите период:`,
+        `📍 <b>${name}</b>
+Выберите период:`,
         {
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
           ...getLocationMenu(id),
         }
       );
@@ -528,15 +523,16 @@ bot.on('callback_query', async (ctx) => {
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
-      if (!location) return await ctx.editMessageText('❌ Место не найдено\\.');
+      if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны\\.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const msg = getPrayerTimesForToday(timesData);
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
-        `📍 *${escapeMarkdown(name)}*\n${msg}`,
+        `📍 <b>${name}</b>
+${msg}`,
         {
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
           ...getLocationMenu(id),
         }
       );
@@ -548,16 +544,17 @@ bot.on('callback_query', async (ctx) => {
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
-      if (!location) return await ctx.editMessageText('❌ Место не найдено\\.');
+      if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны\\.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const monthEn = getEnglishMonthName('now');
       const msg = getPrayerTimesTableForMonth(timesData, monthEn);
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
-        `📍 *${escapeMarkdown(name)}*\n${msg}`,
+        `📍 <b>${name}</b>
+${msg}`,
         {
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
           ...getLocationMenu(id),
         }
       );
@@ -569,9 +566,9 @@ bot.on('callback_query', async (ctx) => {
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
-      if (!location) return await ctx.editMessageText('❌ Место не найдено\\.');
+      if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны\\.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       return await ctx.editMessageText('🗓️ Выберите месяц:', getMonthsList(id));
     }
 
@@ -581,19 +578,20 @@ bot.on('callback_query', async (ctx) => {
       const ruMonth = parts.slice(2, -1).join('_');
       const locationId = parts[parts.length - 1];
       const enMonth = getEnglishMonthName(ruMonth);
-      if (!enMonth) return await ctx.editMessageText('❌ Месяц не распознан\\.', getLocationMenu(locationId));
+      if (!enMonth) return await ctx.editMessageText('❌ Месяц не распознан.', getLocationMenu(locationId));
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == locationId
       );
-      if (!location) return await ctx.editMessageText('❌ Место не найдено\\.');
+      if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(locationId);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны\\.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const msg = getPrayerTimesTableForMonth(timesData, enMonth);
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
-        `📍 *${escapeMarkdown(name)}*\n${msg}`,
+        `📍 <b>${name}</b>
+${msg}`,
         {
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
           ...getLocationMenu(locationId),
         }
       );
@@ -605,14 +603,15 @@ bot.on('callback_query', async (ctx) => {
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
-      if (!location) return await ctx.editMessageText('❌ Место не найдено\\.');
+      if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
-      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны\\.', mainMenu);
+      if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const name = location.name_cities || location.name_areas;
       return await ctx.editMessageText(
-        `📍 *${escapeMarkdown(name)}*\nВыберите период:`,
+        `📍 <b>${name}</b>
+Выберите период:`,
         {
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
           ...getLocationMenu(id),
         }
       );
@@ -622,11 +621,11 @@ bot.on('callback_query', async (ctx) => {
     if (data === 'cmd_quote') {
       const q = getRandomQuote();
       return await ctx.editMessageText(
-        `📘 *Хадис дня*\n` +
-        `❝ _${escapeMarkdown(q.text)}_ ❞\n` +
-        `— *${escapeMarkdown(q.author)}*`,
+        `📘 <b>Хадис дня</b>
+❝ <i>${q.text}</i> ❞
+— <b>${q.author}</b>`,
         {
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
           ...mainMenu,
         }
       );
@@ -635,12 +634,12 @@ bot.on('callback_query', async (ctx) => {
     // ℹ️ О боте
     if (data === 'cmd_about') {
       return await ctx.editMessageText(
-        `ℹ️ *О боте «Рузнама»*\n` +
-        `🕌 Предоставляет точные времена намазов для городов и районов\\.\n` +
-        `📩 Создан с заботой о верующих\\.\n` +
-        `© 2025 \\| Разработан с искренним намерением`,
+        `ℹ️ <b>О боте «Рузнама»</b>
+🕌 Предоставляет точные времена намазов для городов и районов.
+📩 Создан с заботой о верующих.
+© 2025 | Разработан с искренним намерением`,
         {
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
           ...mainMenu,
         }
       );
@@ -649,13 +648,13 @@ bot.on('callback_query', async (ctx) => {
     // 📊 Статистика
     if (data === 'cmd_stats') {
       return await ctx.editMessageText(
-        `📊 *Статистика бота*\n` +
-        `👥 *Пользователей:* \\`${users.size}\\`\n` +
-        `🏙️ *Городов:* \\`${citiesAreasData.cities.length}\\`\n` +
-        `🏘️ *Районов:* \\`${citiesAreasData.areas.length}\\`\n` +
-        `🕌 *Всего мест:* \\`${citiesAreasData.cities.length + citiesAreasData.areas.length}\\``,
+        `📊 <b>Статистика бота</b>
+👥 <b>Пользователей:</b> <code>${users.size}</code>
+🏙️ <b>Городов:</b> <code>${citiesAreasData.cities.length}</code>
+🏘️ <b>Районов:</b> <code>${citiesAreasData.areas.length}</code>
+🕌 <b>Всего мест:</b> <code>${citiesAreasData.cities.length + citiesAreasData.areas.length}</code>`,
         {
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
           ...mainMenu,
         }
       );
@@ -663,7 +662,7 @@ bot.on('callback_query', async (ctx) => {
   } catch (err) {
     console.error('❌ Ошибка при обработке callback:', err.message);
     try {
-      await ctx.editMessageText('❌ Произошла ошибка\\. Попробуйте позже\\.', mainMenu);
+      await ctx.editMessageText('❌ Произошла ошибка. Попробуйте позже.', mainMenu);
     } catch (e) {
       console.warn('Не удалось отправить сообщение об ошибке');
     }
