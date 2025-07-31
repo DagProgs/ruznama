@@ -221,7 +221,7 @@ const mainMenu = {
       [
         {
           text: '📱 Открыть Mini App',
-          web_app: { url: 'https://ruznama-hazel.vercel.app/webapp' } // ← ваш URL
+          web_app: { url: 'https://ruznama-hazel.vercel.app/webapp/' } // ← ваш URL
         }
       ],
     ],
