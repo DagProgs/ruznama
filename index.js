@@ -3,7 +3,7 @@
  *
  * @author Developer
  * @license MIT
- * @version 1.3.1 (с запоминанием последнего места)
+ * @version 1.3.1 (с исправлением запоминания)
  */
 import { Telegraf } from 'telegraf';
 import fs from 'fs';
@@ -207,10 +207,10 @@ function getLocationMenu(locationId) {
 }
 
 // ========================================================
-// 🏠 ГЛАВНОЕ МЕНЮ (с выравниванием и пробелами)
+// 🏠 ГЛАВНОЕ МЕНЮ
 // ========================================================
 function getMainMenu(userId) {
-  const user = users.has(userId) ? JSON.parse(JSON.stringify([...users])).find(u => u.id === userId.toString()) : null;
+  const user = [...users].find(u => u.id === userId.toString());
   const lastLocation = user?.last_location;
 
   const keyboard = [
@@ -225,7 +225,7 @@ function getMainMenu(userId) {
     ],
   ];
 
-  // Добавляем кнопку "Последнее место", если есть
+  // Кнопка "Последнее место"
   if (lastLocation) {
     const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == lastLocation);
     if (location) {
@@ -243,7 +243,7 @@ function getMainMenu(userId) {
 }
 
 // ========================================================
-// 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ (обновлена)
+// 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ
 // ========================================================
 let users = new Set();
 
@@ -251,7 +251,9 @@ function loadUsers() {
   try {
     if (fs.existsSync(usersFilePath)) {
       const loaded = JSON.parse(fs.readFileSync(usersFilePath, 'utf8'));
-      users = new Set(loaded.map(u => typeof u === 'string' ? { id: u } : u));
+      // Если старые данные — это массив строк, конвертируем
+      const normalized = loaded.map(u => typeof u === 'string' ? { id: u } : u);
+      users = new Set(normalized);
       console.log(`✅ Пользователей загружено: ${users.size}`);
     }
   } catch (e) {
@@ -262,7 +264,7 @@ function loadUsers() {
 function saveUsers() {
   try {
     const serializable = [...users].map(u => typeof u === 'object' ? u : { id: u });
-    fs.writeFileSync(usersFilePath, JSON.stringify(serializable), 'utf8');
+    fs.writeFileSync(usersFilePath, JSON.stringify(serializable, null, 2), 'utf8');
   } catch (e) {
     console.error('❌ Ошибка сохранения users.json:', e.message);
   }
@@ -270,17 +272,15 @@ function saveUsers() {
 
 function addUser(userId) {
   const id = userId.toString();
-  const userArray = [...users];
-  const existingUser = userArray.find(u => u.id === id);
-  if (!existingUser) {
+  const existing = [...users].find(u => u.id === id);
+  if (!existing) {
     users.add({ id });
-    console.log(`🆕 Новый пользователь: ${id} | Всего: ${users.size}`);
+    console.log(`🆕 Новый пользователь: ${id}`);
     saveUsers();
   }
-  return existingUser || { id };
+  return existing || { id };
 }
 
-// Сохраняем последнее место
 function setLastLocation(userId, locationId) {
   const id = userId.toString();
   const userArray = [...users];
@@ -354,93 +354,12 @@ bot.start((ctx) => {
 });
 
 // ========================================================
-// 🆘 /help
-// ========================================================
-bot.command('help', (ctx) => {
-  return ctx.replyWithHTML(
-    `📘 <b>Справка по боту</b>
-• <b>/start</b> — Главное меню
-• <b>/help</b> — Помощь
-• <b>/stats</b> — Статистика
-• <b>/about</b> — О проекте
-• <b>/newquote</b> — Новый хадис
-• <b>/day</b> — Времена намазов на сегодня
-• <b>/month</b> — Таблица на месяц`
-  ).catch(console.error);
-});
-
-// ========================================================
-// 📊 /stats
-// ========================================================
-bot.command('stats', (ctx) => {
-  return ctx.replyWithHTML(
-    `📊 <b>Статистика бота</b>
-👥 <b>Пользователей:</b> <code>${users.size}</code>
-🏙️ <b>Городов:</b> <code>${citiesAreasData.cities.length}</code>
-🏘️ <b>Районов:</b> <code>${citiesAreasData.areas.length}</code>
-🕌 <b>Всего мест:</b> <code>${citiesAreasData.cities.length + citiesAreasData.areas.length}</code>`
-  ).catch(console.error);
-});
-
-// ========================================================
-// ℹ️ /about
-// ========================================================
-bot.command('about', (ctx) => {
-  return ctx.replyWithHTML(
-    `ℹ️ <b>О боте «Рузнама»</b>
-🕌 Предоставляет точные времена намазов для городов и районов.
-📩 Создан с заботой о верующих.
-© 2025 | Разработан с искренним намерением`
-  ).catch(console.error);
-});
-
-// ========================================================
-// 🆕 /newquote
-// ========================================================
-bot.command('newquote', (ctx) => {
-  const q = getRandomQuote();
-  return ctx.replyWithHTML(
-    `📘 <b>Хадис дня</b>
-❝ <i>${q.text}</i> ❞
-— <b>${q.author}</b>`
-  ).catch(console.error);
-});
-
-// ========================================================
-// 🕐 /day — заглушка
-// ========================================================
-bot.command('day', (ctx) => {
-  return ctx.replyWithHTML(
-    '⏳ Чтобы увидеть времена намазов на сегодня — выберите место через меню или введите название.',
-    getMainMenu(ctx.from.id)
-  ).catch(console.error);
-});
-
-// ========================================================
-// 📅 /month — заглушка
-// ========================================================
-bot.command('month', (ctx) => {
-  return ctx.replyWithHTML(
-    '📅 Показывает таблицу на текущий месяц. Сначала выберите место.',
-    getMainMenu(ctx.from.id)
-  ).catch(console.error);
-});
-
-// ========================================================
-// 🗓️ /year — заглушка
-// ========================================================
-bot.command('year', (ctx) => {
-  return ctx.replyWithHTML('🗓️ Выберите месяц. Сначала укажите место.', getMainMenu(ctx.from.id))
-    .catch(console.error);
-});
-
-// ========================================================
 // 🔤 ОБРАБОТКА ТЕКСТА (поиск)
 // ========================================================
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return;
-  const user = addUser(ctx.from.id);
+  addUser(ctx.from.id);
   const results = searchLocations(text);
   if (results.length === 0) {
     return ctx.replyWithHTML(
@@ -524,12 +443,10 @@ bot.on('callback_query', async (ctx) => {
     // 📍 Выбор места
     if (data.startsWith('loc_')) {
       const id = data.split('_')[1];
-      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
-        (l) => l.id == id
-      );
+      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
 
-      setLastLocation(userId, id); // Сохраняем последнее место
+      setLastLocation(userId, id); // ✅ Сохраняем
 
       const timesData = loadTimesById(id);
       const name = location.name_cities || location.name_areas;
@@ -552,11 +469,9 @@ bot.on('callback_query', async (ctx) => {
     // 🕐 Сегодня
     if (data.startsWith('day_')) {
       const id = data.split('_')[1];
-      setLastLocation(userId, id); // Сохраняем
+      setLastLocation(userId, id); // ✅ Сохраняем
 
-      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
-        (l) => l.id == id
-      );
+      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(userId));
@@ -576,11 +491,9 @@ ${msg}`,
     // 📅 Месяц (текущий)
     if (data.startsWith('month_')) {
       const id = data.split('_')[1];
-      setLastLocation(userId, id); // Сохраняем
+      setLastLocation(userId, id); // ✅ Сохраняем
 
-      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
-        (l) => l.id == id
-      );
+      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(userId));
@@ -601,9 +514,7 @@ ${msg}`,
     // 🗓️ Год → выбор месяца
     if (data.startsWith('year_')) {
       const id = data.split('_')[1];
-      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
-        (l) => l.id == id
-      );
+      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(userId));
@@ -615,14 +526,12 @@ ${msg}`,
       const parts = data.split('_');
       const ruMonth = parts.slice(2, -1).join('_');
       const locationId = parts[parts.length - 1];
-      setLastLocation(userId, locationId); // Сохраняем
+      setLastLocation(userId, locationId); // ✅ Сохраняем
 
       const enMonth = getEnglishMonthName(ruMonth);
       if (!enMonth) return await ctx.editMessageText('❌ Месяц не распознан.', getLocationMenu(locationId));
 
-      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
-        (l) => l.id == locationId
-      );
+      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == locationId);
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(locationId);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(userId));
@@ -642,9 +551,7 @@ ${msg}`,
     // 🔙 Назад к месту
     if (data.startsWith('back_to_loc_')) {
       const id = data.split('_')[3];
-      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
-        (l) => l.id == id
-      );
+      const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id == id);
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', getMainMenu(userId));
@@ -702,6 +609,7 @@ ${msg}`,
         }
       );
     }
+
   } catch (err) {
     console.error('❌ Ошибка при обработке callback:', err.message);
     try {
@@ -716,7 +624,7 @@ ${msg}`,
 // 🚀 ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ И ХАДИСОВ
 // ========================================================
 loadUsers();
-loadQuotes(); // Загружаем хадисы при старте
+loadQuotes();
 
 // ========================================================
 // ☁️ Vercel Webhook
