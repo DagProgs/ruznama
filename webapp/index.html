@@ -143,7 +143,6 @@
     .search-box button:hover {
       transform: translateY(-2px);
     }
-
     /* Стиль для автодополнения */
     .suggestions {
       position: absolute;
@@ -183,7 +182,6 @@
       background: #4fd1c5;
       color: #0a1128;
     }
-
     #results {
       margin: 40px 0;
       display: none;
@@ -349,7 +347,6 @@
       <p>© 2025 <strong>Рузнама</strong>. Создан с искренним намерением.</p>
     </footer>
   </div>
-
   <script>
     // Загрузка данных
     let citiesAreasData = { cities: [], areas: [] };
@@ -362,6 +359,8 @@
           ...data.cities.map(c => ({ ...c, type: 'city' })),
           ...data.areas.map(a => ({ ...a, type: 'area' }))
         ];
+        // После загрузки данных — попробовать восстановить последний город
+        loadLastLocation();
       })
       .catch(err => console.error('Ошибка загрузки cities-areas.json:', err));
 
@@ -385,7 +384,7 @@
       }
     }
 
-    // Формат времени (оставлено как в оригинале)
+    // Формат времени
     function fmt(time) {
       return Array.isArray(time) && time.length >= 2
         ? `${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}`
@@ -398,22 +397,19 @@
     let suggestionItems = [];
     let activeSuggestionIndex = -1;
 
-    // Показать подсказки с сортировкой: сначала где совпадение в начале
+    // Показать подсказки
     function showSuggestions(matches) {
       suggestionsBox.innerHTML = '';
       if (matches.length === 0) {
         suggestionsBox.style.display = 'none';
         return;
       }
-
       const query = searchInput.value.trim().toLowerCase();
-      // Сортировка: чем раньше вхождение — тем выше
       matches.sort((a, b) => {
         const nameA = (a.name_cities || a.name_areas || '').toLowerCase();
         const nameB = (b.name_cities || b.name_areas || '').toLowerCase();
         return nameA.indexOf(query) - nameB.indexOf(query);
       });
-
       matches.forEach((loc, index) => {
         const div = document.createElement('div');
         div.className = 'suggestion-item';
@@ -426,7 +422,6 @@
         });
         suggestionsBox.appendChild(div);
       });
-
       suggestionItems = Array.from(suggestionsBox.children);
       suggestionsBox.style.display = 'block';
       activeSuggestionIndex = -1;
@@ -439,19 +434,16 @@
         suggestionsBox.style.display = 'none';
         return;
       }
-
       const filtered = locations.filter(loc => {
         const name = (loc.name_cities || loc.name_areas || '').toLowerCase();
         return name.includes(query);
       });
-
       showSuggestions(filtered);
     });
 
     // Навигация стрелками
     searchInput.addEventListener('keydown', (e) => {
       if (!suggestionItems.length) return;
-
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         activeSuggestionIndex = (activeSuggestionIndex + 1) % suggestionItems.length;
@@ -467,11 +459,10 @@
           suggestionsBox.style.display = 'none';
           searchLocation();
         } else {
-          searchLocation(); // Если нет активной подсказки — обычный поиск
+          searchLocation();
         }
       }
     });
-
     function updateActive() {
       suggestionItems.forEach((item, i) => {
         item.classList.toggle('active', i === activeSuggestionIndex);
@@ -485,7 +476,7 @@
       }
     });
 
-    // Основная функция поиска (оставлена как в оригинале)
+    // Основная функция поиска
     async function searchLocation() {
       const query = document.getElementById('searchInput').value.trim().toLowerCase();
       const resultsDiv = document.getElementById('results');
@@ -504,7 +495,7 @@
         if (!response.ok) throw new Error('Файл не найден');
         const data = await response.json();
         const now = new Date();
-        const monthEn = now.toLocaleString('en-GB', { month: 'long' }); // как в оригинале
+        const monthEn = now.toLocaleString('en-GB', { month: 'long' });
         const day = String(now.getDate()).padStart(2, '0');
         const monthData = data[monthEn];
         const dayData = monthData ? monthData[day] : null;
@@ -518,21 +509,49 @@
         document.getElementById('Asr').textContent = fmt(dayData.Asr);
         document.getElementById('Maghrib').textContent = fmt(dayData.Maghrib);
         document.getElementById('Isha').textContent = fmt(dayData.Isha);
+
+        // ✅ Сохраняем последнее местоположение
+        localStorage.setItem('lastLocation', JSON.stringify({
+          query: query,
+          name: name,
+          id: id
+        }));
+
       } catch (err) {
         alert('Ошибка загрузки времён намазов');
         console.error(err);
       }
     }
 
-    // Поддержка Enter (как в оригинале, но с приоритетом автодополнения)
+    // Поддержка Enter
     searchInput.addEventListener('keypress', e => {
       if (e.key === 'Enter') {
         if (suggestionsBox.style.display === 'block' && activeSuggestionIndex >= 0) {
-          return; // Обрабатывается в keydown
+          return;
         }
         searchLocation();
       }
     });
+
+    // ✅ Загрузка последнего местоположения
+    function loadLastLocation() {
+      const last = localStorage.getItem('lastLocation');
+      if (!last) return;
+      try {
+        const lastLoc = JSON.parse(last);
+        const loc = locations.find(l => 
+          (l.name_cities || l.name_areas || '').toLowerCase() === lastLoc.query
+        );
+        if (loc) {
+          searchInput.value = loc.name_cities || loc.name_areas;
+          searchLocation(); // Автоматически загружаем
+        }
+      } catch (e) {
+        console.error('Ошибка при загрузке последнего местоположения:', e);
+      }
+    }
+
+    // Вызываем при загрузке (уже в fetch)
   </script>
 </body>
 </html>
