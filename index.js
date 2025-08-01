@@ -131,14 +131,12 @@ function getPrayerTimesForToday(timesData) {
 function getPrayerTimesTableForMonth(timesData, monthEn) {
   const monthData = timesData[monthEn];
   if (!monthData) return `❌ Нет данных за <b>${monthEn}</b>`;
-
   const monthRu = getRussianMonthName(monthEn);
   const monthRuCap = monthRu.charAt(0).toUpperCase() + monthRu.slice(1);
-
   const col = { day: 2, time: 5 }; // Узкие колонки
   let table = `<pre style="font-family: monospace; white-space: pre;">`;
 
-  // Заголовки: Фадж., Шур., Зухр, Аср, Магр., Иша
+  // Заголовки
   table += `Д`.padEnd(col.day + 1) +
            `Фадж.`.padEnd(col.time + 1) +
            `Шур.`.padEnd(col.time + 1) +
@@ -205,6 +203,7 @@ function getLocationMenu(locationId) {
         [{ text: '📅 Текущий месяц', callback_data: `month_${locationId}` }],
         [{ text: '🗓️ Выбрать месяц', callback_data: `year_${locationId}` }],
         [],
+        [{ text: '📱 Mini App', web_app: { url: 'https://ruznama-hazel.vercel.app/webapp/index.html' } }],
         [{ text: '⬅️ Назад к списку', callback_data: 'cmd_cities_areas' }],
       ],
     },
@@ -226,6 +225,8 @@ const mainMenu = {
         { text: 'ℹ️ О боте', callback_data: 'cmd_about' },
         { text: '📊 Статистика', callback_data: 'cmd_stats' },
       ],
+      // КНОПКА MINI APP
+      [{ text: '📱 Открыть Mini App', web_app: { url: 'https://ruznama-hazel.vercel.app/webapp/index.html' } }],
     ],
   },
 };
@@ -268,6 +269,7 @@ function addUser(userId) {
 // 📜 ХАДИС ДНЯ
 // ========================================================
 let quotes = [];
+
 function loadQuotes() {
   try {
     const quotesPath = path.join(process.cwd(), 'quotes.json');
@@ -440,13 +442,11 @@ bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.callbackQuery.from.id;
   addUser(userId);
-
   try {
     await ctx.answerCbQuery().catch(() => {});
   } catch (err) {
     console.warn('⚠️ Не удалось ответить на callback:', err.message);
   }
-
   try {
     // 🏠 Главное меню
     if (data === 'cmd_cities_areas') {
@@ -455,7 +455,6 @@ bot.on('callback_query', async (ctx) => {
         ...mainMenu,
       });
     }
-
     // 🏙️ Города
     if (data === 'cmd_cities') {
       if (!citiesAreasData.cities.length) {
@@ -473,7 +472,6 @@ bot.on('callback_query', async (ctx) => {
         reply_markup: { inline_keyboard: keyboard },
       });
     }
-
     // 🏘️ Районы
     if (data === 'cmd_areas') {
       if (!citiesAreasData.areas.length) {
@@ -491,7 +489,6 @@ bot.on('callback_query', async (ctx) => {
         reply_markup: { inline_keyboard: keyboard },
       });
     }
-
     // 📍 Выбор места
     if (data.startsWith('loc_')) {
       const id = data.split('_')[1];
@@ -516,7 +513,6 @@ bot.on('callback_query', async (ctx) => {
         }
       );
     }
-
     // 🕐 Сегодня
     if (data.startsWith('day_')) {
       const id = data.split('_')[1];
@@ -537,7 +533,6 @@ ${msg}`,
         }
       );
     }
-
     // 📅 Месяц (текущий)
     if (data.startsWith('month_')) {
       const id = data.split('_')[1];
@@ -559,7 +554,6 @@ ${msg}`,
         }
       );
     }
-
     // 🗓️ Год → выбор месяца
     if (data.startsWith('year_')) {
       const id = data.split('_')[1];
@@ -571,7 +565,6 @@ ${msg}`,
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       return await ctx.editMessageText('🗓️ Выберите месяц:', getMonthsList(id));
     }
-
     // 📅 Выбор месяца
     if (data.startsWith('select_month_')) {
       const parts = data.split('_');
@@ -596,7 +589,6 @@ ${msg}`,
         }
       );
     }
-
     // 🔙 Назад к месту
     if (data.startsWith('back_to_loc_')) {
       const id = data.split('_')[3];
@@ -616,7 +608,6 @@ ${msg}`,
         }
       );
     }
-
     // 📜 Хадис дня
     if (data === 'cmd_quote') {
       const q = getRandomQuote();
@@ -630,7 +621,6 @@ ${msg}`,
         }
       );
     }
-
     // ℹ️ О боте
     if (data === 'cmd_about') {
       return await ctx.editMessageText(
@@ -644,7 +634,6 @@ ${msg}`,
         }
       );
     }
-
     // 📊 Статистика
     if (data === 'cmd_stats') {
       return await ctx.editMessageText(
