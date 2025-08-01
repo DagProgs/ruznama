@@ -8,12 +8,20 @@
     {
       "src": "webapp/**/*",
       "use": "@vercel/static"
+    },
+    {
+      "src": "db/**/*",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/webapp/(.*)",
-      "dest": "/webapp/"
+      "dest": "/webapp/$1"
+    },
+    {
+      "src": "/db/(.*)",
+      "dest": "/db/$1"
     },
     {
       "src": "/(.*)",
