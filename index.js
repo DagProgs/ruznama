@@ -115,12 +115,12 @@ function getPrayerTimesForToday(timesData) {
   return `
 ✨ <b>Времена намазов на сегодня</b>
 📅 <i>${day} ${monthRuCap}</i>
-🌅 <b>Фаджр</b>   —  ${fmt(dayData.Fajr)}
-🏞 <b>Шурук</b>   —  ${fmt(dayData.Sunrise)}
-🌇 <b>Зухр</b>    —  ${fmt(dayData.Dhuhr)}
-🌆 <b>Аср</b>     —  ${fmt(dayData.Asr)}
-🌄 <b>Магриб</b>  —  ${fmt(dayData.Maghrib)}
-🌃 <b>Иша</b>     —  ${fmt(dayData.Isha)}
+🕌 <b>Фаджр</b>   —  ${fmt(dayData.Fajr)}
+🌅 <b>Шурук</b>   —  ${fmt(dayData.Sunrise)}
+☀️ <b>Зухр</b>    —  ${fmt(dayData.Dhuhr)}
+🌇 <b>Аср</b>     —  ${fmt(dayData.Asr)}
+🌆 <b>Магриб</b>  —  ${fmt(dayData.Maghrib)}
+🌙 <b>Иша</b>     —  ${fmt(dayData.Isha)}
 🕋 Пусть ваш намаз будет принят.
 `.trim();
 }
