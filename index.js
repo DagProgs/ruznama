@@ -233,14 +233,14 @@ const mainMenu = {
 // ========================================================
 // 👥 РАБОТА С ПОЛЬЗОВАТЕЛЯМИ
 // ========================================================
-let users = new Set();
+let users = {}; // Объект с userId как ключом и { lastLocationId } как значение
 
 function loadUsers() {
   try {
     if (fs.existsSync(usersFilePath)) {
       const loaded = JSON.parse(fs.readFileSync(usersFilePath, 'utf8'));
-      users = new Set(loaded);
-      console.log(`✅ Пользователей загружено: ${users.size}`);
+      users = loaded; // { "123456": { lastLocationId: "loc_1" }, ... }
+      console.log(`✅ Пользователей загружено: ${Object.keys(users).length}`);
     }
   } catch (e) {
     console.error('❌ Ошибка загрузки users.json:', e.message);
@@ -249,7 +249,7 @@ function loadUsers() {
 
 function saveUsers() {
   try {
-    fs.writeFileSync(usersFilePath, JSON.stringify([...users]), 'utf8');
+    fs.writeFileSync(usersFilePath, JSON.stringify(users), 'utf8');
   } catch (e) {
     console.error('❌ Ошибка сохранения users.json:', e.message);
   }
@@ -257,10 +257,18 @@ function saveUsers() {
 
 function addUser(userId) {
   const id = userId.toString();
-  if (!users.has(id)) {
-    users.add(id);
+  if (!users[id]) {
+    users[id] = { lastLocationId: null };
     saveUsers();
-    console.log(`🆕 Новый пользователь: ${id} | Всего: ${users.size}`);
+    console.log(`🆕 Новый пользователь: ${id}`);
+  }
+}
+
+function updateUserLocation(userId, locationId) {
+  const id = userId.toString();
+  if (users[id]) {
+    users[id].lastLocationId = locationId;
+    saveUsers();
   }
 }
 
@@ -346,7 +354,7 @@ bot.command('help', (ctx) => {
 bot.command('stats', (ctx) => {
   return ctx.replyWithHTML(
     `📊 <b>Статистика бота</b>
-👥 <b>Пользователей:</b> <code>${users.size}</code>
+👥 <b>Пользователей:</b> <code>${Object.keys(users).length}</code>
 🏙️ <b>Городов:</b> <code>${citiesAreasData.cities.length}</code>
 🏘️ <b>Районов:</b> <code>${citiesAreasData.areas.length}</code>
 🕌 <b>Всего мест:</b> <code>${citiesAreasData.cities.length + citiesAreasData.areas.length}</code>`
@@ -378,62 +386,62 @@ bot.command('newquote', (ctx) => {
 });
 
 // ========================================================
-// 🕐 /day — заглушка
+// 🕐 /day — показываем по последнему выбранному месту или сообщение
 // ========================================================
 bot.command('day', (ctx) => {
-  return ctx.replyWithHTML(
-    '⏳ Чтобы увидеть времена намазов на сегодня — выберите место через меню или введите название.',
-    mainMenu
-  ).catch(console.error);
+  const userId = ctx.from.id.toString();
+  const userData = users[userId];
+  const lastLocId = userData ? userData.lastLocationId : null;
+
+  if (!lastLocId) {
+    return ctx.reply('Пожалуйста, сначала выберите место через меню или введите название.');
+  }
+
+  const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id === lastLocId);
+  if (!location) {
+    return ctx.reply('Последнее выбранное место не найдено. Пожалуйста, выберите новое.');
+  }
+
+  const timesData = loadTimesById(lastLocId);
+  if (!timesData) {
+    return ctx.reply('Данные для этого места недоступны.');
+  }
+
+  const msg = getPrayerTimesForToday(timesData);
+  const name = location.name_cities || location.name_areas;
+  ctx.replyWithHTML(`📍 <b>${name}</b>\n${msg}`);
 });
 
 // ========================================================
-// 📅 /month — заглушка
+// Аналогично для /month
 // ========================================================
 bot.command('month', (ctx) => {
-  return ctx.replyWithHTML(
-    '📅 Показывает таблицу на текущий месяц. Сначала выберите место.',
-    mainMenu
-  ).catch(console.error);
-});
+  const userId = ctx.from.id.toString();
+  const userData = users[userId];
+  const lastLocId = userData ? userData.lastLocationId : null;
 
-// ========================================================
-// 🗓️ /year — заглушка
-// ========================================================
-bot.command('year', (ctx) => {
-  return ctx.replyWithHTML('🗓️ Выберите месяц. Сначала укажите место.', mainMenu)
-    .catch(console.error);
-});
-
-// ========================================================
-// 🔤 ОБРАБОТКА ТЕКСТА (поиск)
-// ========================================================
-bot.on('text', async (ctx) => {
-  const text = ctx.message.text.trim();
-  if (text.startsWith('/')) return;
-  addUser(ctx.from.id);
-  const results = searchLocations(text);
-  if (results.length === 0) {
-    return ctx.replyWithHTML(
-      `🔍 <b>По запросу «${text}» ничего не найдено.</b>
-Проверьте написание или попробуйте другой вариант.`,
-      mainMenu
-    ).catch(console.error);
+  if (!lastLocId) {
+    return ctx.reply('Пожалуйста, сначала выберите место через меню или введите название.');
   }
-  const keyboard = results.map((loc) => [
-    {
-      text: `${loc.name_cities ? '🏙️' : '🏘️'} ${loc.name_cities || loc.name_areas}`,
-      callback_data: `loc_${loc.id}`,
-    },
-  ]);
-  await ctx.replyWithHTML(
-    `🔍 <b>Найдено ${results.length}:</b>`,
-    { reply_markup: { inline_keyboard: keyboard } }
-  ).catch(console.error);
+
+  const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(l => l.id === lastLocId);
+  if (!location) {
+    return ctx.reply('Последнее выбранное место не найдено.');
+  }
+
+  const timesData = loadTimesById(lastLocId);
+  if (!timesData) {
+    return ctx.reply('Данные для этого места недоступны.');
+  }
+
+  const monthEn = getEnglishMonthName('now');
+  const msg = getPrayerTimesTableForMonth(timesData, monthEn);
+  const name = location.name_cities || location.name_areas;
+  ctx.replyWithHTML(`📍 <b>${name}</b>\n${msg}`);
 });
 
 // ========================================================
-// 🔘 ОБРАБОТКА КНОПОК
+// Обработка callback_query
 // ========================================================
 bot.on('callback_query', async (ctx) => {
   if (!ctx.callbackQuery || !ctx.callbackQuery.data) return;
@@ -448,7 +456,7 @@ bot.on('callback_query', async (ctx) => {
   }
 
   try {
-    // 🏠 Главное меню
+    // Обработка команд, недавно реализованных
     if (data === 'cmd_cities_areas') {
       return await ctx.editMessageText('🏠 Выберите раздел:', {
         parse_mode: 'HTML',
@@ -456,7 +464,6 @@ bot.on('callback_query', async (ctx) => {
       });
     }
 
-    // 🏙️ Города
     if (data === 'cmd_cities') {
       if (!citiesAreasData.cities.length) {
         return await ctx.editMessageText('📭 Нет доступных городов.', {
@@ -474,7 +481,6 @@ bot.on('callback_query', async (ctx) => {
       });
     }
 
-    // 🏘️ Районы
     if (data === 'cmd_areas') {
       if (!citiesAreasData.areas.length) {
         return await ctx.editMessageText('📭 Нет доступных районов.', {
@@ -492,13 +498,16 @@ bot.on('callback_query', async (ctx) => {
       });
     }
 
-    // 📍 Выбор места
     if (data.startsWith('loc_')) {
       const id = data.split('_')[1];
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+      
+      // Обновляем последнее выбранное место
+      updateUserLocation(userId, id);
+
       const timesData = loadTimesById(id);
       const name = location.name_cities || location.name_areas;
       if (!timesData) {
@@ -517,13 +526,16 @@ bot.on('callback_query', async (ctx) => {
       );
     }
 
-    // 🕐 Сегодня
     if (data.startsWith('day_')) {
       const id = data.split('_')[1];
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
+      // Обновляем последнее выбранное место
+      updateUserLocation(userId, id);
+
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const msg = getPrayerTimesForToday(timesData);
@@ -538,13 +550,16 @@ ${msg}`,
       );
     }
 
-    // 📅 Месяц (текущий)
     if (data.startsWith('month_')) {
       const id = data.split('_')[1];
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
+      // Обновляем последнее место
+      updateUserLocation(userId, id);
+
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const monthEn = getEnglishMonthName('now');
@@ -560,29 +575,36 @@ ${msg}`,
       );
     }
 
-    // 🗓️ Год → выбор месяца
     if (data.startsWith('year_')) {
       const id = data.split('_')[1];
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
+      // Обновляем последнее место
+      updateUserLocation(userId, id);
+
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       return await ctx.editMessageText('🗓️ Выберите месяц:', getMonthsList(id));
     }
 
-    // 📅 Выбор месяца
     if (data.startsWith('select_month_')) {
       const parts = data.split('_');
       const ruMonth = parts.slice(2, -1).join('_');
       const locationId = parts[parts.length - 1];
       const enMonth = getEnglishMonthName(ruMonth);
       if (!enMonth) return await ctx.editMessageText('❌ Месяц не распознан.', getLocationMenu(locationId));
+
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == locationId
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+
+      // Обновляем последнее место
+      updateUserLocation(userId, locationId);
+
       const timesData = loadTimesById(locationId);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const msg = getPrayerTimesTableForMonth(timesData, enMonth);
@@ -597,13 +619,16 @@ ${msg}`,
       );
     }
 
-    // 🔙 Назад к месту
     if (data.startsWith('back_to_loc_')) {
       const id = data.split('_')[3];
       const location = [...citiesAreasData.cities, ...citiesAreasData.areas].find(
         (l) => l.id == id
       );
       if (!location) return await ctx.editMessageText('❌ Место не найдено.');
+      
+      // Обновляем последнее место
+      updateUserLocation(userId, id);
+
       const timesData = loadTimesById(id);
       if (!timesData) return await ctx.editMessageText('❌ Данные недоступны.', mainMenu);
       const name = location.name_cities || location.name_areas;
@@ -617,7 +642,7 @@ ${msg}`,
       );
     }
 
-    // 📜 Хадис дня
+    // Хадис дня
     if (data === 'cmd_quote') {
       const q = getRandomQuote();
       return await ctx.editMessageText(
@@ -631,7 +656,7 @@ ${msg}`,
       );
     }
 
-    // ℹ️ О боте
+    // О боте
     if (data === 'cmd_about') {
       return await ctx.editMessageText(
         `ℹ️ <b>О боте «Рузнама»</b>
@@ -645,11 +670,11 @@ ${msg}`,
       );
     }
 
-    // 📊 Статистика
+    // Статистика
     if (data === 'cmd_stats') {
       return await ctx.editMessageText(
         `📊 <b>Статистика бота</b>
-👥 <b>Пользователей:</b> <code>${users.size}</code>
+👥 <b>Пользователей:</b> <code>${Object.keys(users).length}</code>
 🏙️ <b>Городов:</b> <code>${citiesAreasData.cities.length}</code>
 🏘️ <b>Районов:</b> <code>${citiesAreasData.areas.length}</code>
 🕌 <b>Всего мест:</b> <code>${citiesAreasData.cities.length + citiesAreasData.areas.length}</code>`,
@@ -659,6 +684,7 @@ ${msg}`,
         }
       );
     }
+
   } catch (err) {
     console.error('❌ Ошибка при обработке callback:', err.message);
     try {
@@ -704,7 +730,7 @@ export default async function handler(req, res) {
 if (process.env.NODE_ENV !== 'production') {
   bot.launch().then(() => {
     console.log('✅ Бот запущен локально');
-    console.log(`👥 Пользователей: ${users.size}`);
+    console.log(`👥 Пользователей: ${Object.keys(users).length}`);
   }).catch(err => {
     console.error('❌ Ошибка запуска бота:', err.message);
   });
