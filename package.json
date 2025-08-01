@@ -1,0 +1,20 @@
+{
+  "name": "ruznama-bot",
+  "version": "1.0.0",
+  "description": "ruznama-bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "NODE_ENV=development node index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.53.0",
+    "telegraf": "^4.16.3"
+  },
+  "keywords": [
+    "ruznama",
+    "bot"
+  ],
+  "author": "DagProgs",
+  "license": "MIT"
+}
